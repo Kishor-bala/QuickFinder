@@ -37,15 +37,18 @@ try {
   logger.warn(`⚠️ Could not create upload directory (${err.message}). Safe fallback active.`);
 }
 
+// Helper to unwrap ESM/CJS interop modules in Vercel bundler environment
+const getHandler = (mod) => (mod && typeof mod === 'object' && mod.default ? mod.default : mod);
+
 const app = express();
 
 // Security and utility middleware
-app.use(securityHeaders);
+app.use(getHandler(securityHeaders));
 app.use(cors({
   origin: config.corsOrigin,
   credentials: true,
 }));
-app.use(requestLogger);
+app.use(getHandler(requestLogger));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -53,7 +56,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/uploads', express.static(config.uploadDir));
 
 // Rate limiting on API routes
-app.use('/api', apiRateLimiter);
+app.use('/api', getHandler(apiRateLimiter));
 
 // Health Probes for Docker/Kubernetes/Monitoring
 app.get('/', (req, res) => {
@@ -99,13 +102,13 @@ app.get('/api/health', async (req, res) => {
 });
 
 // API Routing Table
-app.use('/api/auth', authRoutes);
-app.use('/api/lost-items', lostRoutes);
-app.use('/api/found-items', foundRoutes);
-app.use('/api/matches', matchRoutes);
-app.use('/api/claims', claimRoutes);
-app.use('/api/notifications', notificationRoutes);
-app.use('/api/admin', adminRoutes);
+app.use('/api/auth', getHandler(authRoutes));
+app.use('/api/lost-items', getHandler(lostRoutes));
+app.use('/api/found-items', getHandler(foundRoutes));
+app.use('/api/matches', getHandler(matchRoutes));
+app.use('/api/claims', getHandler(claimRoutes));
+app.use('/api/notifications', getHandler(notificationRoutes));
+app.use('/api/admin', getHandler(adminRoutes));
 
 // 404 Handler for unmatched endpoints
 app.use((req, res) => {
@@ -116,7 +119,7 @@ app.use((req, res) => {
 });
 
 // Centralized Error Handling Pipeline
-app.use(errorHandler);
+app.use(getHandler(errorHandler));
 
 // Server startup and graceful shutdown lifecycle
 let server = null;
