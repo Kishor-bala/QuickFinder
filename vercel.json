@@ -7,6 +7,6 @@
     { "source": "/api", "destination": "/api/index.js" },
     { "source": "/uploads/(.*)", "destination": "/api/index.js" },
     { "source": "/health", "destination": "/api/index.js" },
-    { "source": "/((?!api|uploads|health).*)", "destination": "/index.html" }
+    { "source": "/((?!api|uploads|health|assets|.*\\..*).*)", "destination": "/index.html" }
   ]
 }
