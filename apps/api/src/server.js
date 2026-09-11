@@ -56,6 +56,15 @@ app.use('/uploads', express.static(config.uploadDir));
 app.use('/api', apiRateLimiter);
 
 // Health Probes for Docker/Kubernetes/Monitoring
+app.get('/', (req, res) => {
+  res.status(200).json({
+    name: 'Quick Finder API',
+    status: 'online',
+    health: '/api/health',
+    timestamp: new Date().toISOString(),
+  });
+});
+
 app.get('/health', (req, res) => {
   res.status(200).send('OK');
 });
@@ -98,11 +107,11 @@ app.use('/api/claims', claimRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/admin', adminRoutes);
 
-// 404 Handler for unmatched API endpoints
-app.use('/api', (req, res) => {
+// 404 Handler for unmatched endpoints
+app.use((req, res) => {
   res.status(404).json({
     success: false,
-    message: `Requested API endpoint "${req.method} ${req.originalUrl}" not found.`,
+    message: `Requested endpoint "${req.method} ${req.originalUrl}" not found.`,
   });
 });
 
