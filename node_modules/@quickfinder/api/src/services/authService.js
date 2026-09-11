@@ -4,7 +4,7 @@ const config = require('../config');
 const userRepository = require('../repositories/userRepository');
 const notificationRepository = require('../repositories/notificationRepository');
 const { BadRequestError, UnauthorizedError, ConflictError, ForbiddenError } = require('../utils/errors');
-const { validateRegistration } = require('@quickfinder/shared');
+const { validateRegistration } = require('../../../../packages/shared/src');
 
 class AuthService {
   generateToken(user) {

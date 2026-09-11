@@ -5,7 +5,7 @@ const {
   LOCATION_SYNONYMS,
   COLOR_SYNONYMS,
   MATCHING_CONFIG,
-} = require('@quickfinder/shared');
+} = require('../../../../packages/shared/src');
 
 // Normalize text: lowercase, remove non-alphanumeric, trim
 function normalizeText(text) {

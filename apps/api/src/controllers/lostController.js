@@ -1,7 +1,7 @@
 const itemRepository = require('../repositories/itemRepository');
 const matchRepository = require('../repositories/matchRepository');
 const matchingService = require('../services/matchingService');
-const { validateItemReport } = require('@quickfinder/shared');
+const { validateItemReport } = require('../../../../packages/shared/src');
 const { BadRequestError, NotFoundError, ForbiddenError } = require('../utils/errors');
 
 exports.createLostItem = async (req, res, next) => {
