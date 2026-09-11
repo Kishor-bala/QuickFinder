@@ -111,15 +111,28 @@ export default function LoginPage() {
     }
   };
 
-  // Password reset via Firebase
+  const [resetLink, setResetLink] = useState('');
+
+  // Password reset via API & Firebase Admin SDK
   const handleForgotPassword = async (e) => {
     e.preventDefault();
+    if (!forgotEmail.trim()) return;
     setForgotLoading(true);
+    setResetLink('');
     try {
-      await sendPasswordResetEmail(firebaseAuth, forgotEmail.trim());
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: forgotEmail.trim() }),
+      });
+      const data = await res.json();
+      if (data.resetLink) {
+        setResetLink(data.resetLink);
+      }
       setForgotSuccess(true);
     } catch (err) {
-      setForgotSuccess(true); // Don't leak account existence
+      console.error('Password reset error:', err);
+      setForgotSuccess(true);
     } finally {
       setForgotLoading(false);
     }
@@ -259,14 +272,28 @@ export default function LoginPage() {
           <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-slate-100 space-y-4">
             <h3 className="font-extrabold text-psg-navy text-base">Reset Account Password</h3>
             {forgotSuccess ? (
-              <div className="text-center py-4 space-y-2">
+              <div className="text-center py-4 space-y-3">
                 <CheckCircle className="w-10 h-10 text-emerald-500 mx-auto" />
-                <p className="text-xs text-slate-600 font-medium">
-                  If <strong>{forgotEmail}</strong> is registered, a password reset link has been sent. Check your inbox.
+                <p className="text-xs text-slate-600 font-medium leading-relaxed">
+                  If <strong>{forgotEmail}</strong> is registered, password reset instructions have been generated.
                 </p>
+                {resetLink && (
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-2xl space-y-2 text-center animate-fade-in-up">
+                    <p className="text-xs font-extrabold text-psg-navy">Direct Password Reset Link:</p>
+                    <a
+                      href={resetLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-psg-blue hover:bg-psg-royal text-white text-xs font-black rounded-xl shadow-md transition transform hover:-translate-y-0.5"
+                    >
+                      <span>CLICK TO RESET PASSWORD</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </a>
+                  </div>
+                )}
                 <button
-                  onClick={() => { setForgotModal(false); setForgotSuccess(false); setForgotEmail(''); }}
-                  className="mt-2 px-4 py-2 bg-psg-navy text-white text-xs font-bold rounded-xl"
+                  onClick={() => { setForgotModal(false); setForgotSuccess(false); setForgotEmail(''); setResetLink(''); }}
+                  className="mt-2 px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-bold rounded-xl transition"
                 >
                   Close
                 </button>

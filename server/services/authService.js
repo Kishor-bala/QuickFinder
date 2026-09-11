@@ -437,6 +437,49 @@ class AuthService {
     const token = this.generateToken(user);
     return { user, token };
   }
+
+  async forgotPassword(email) {
+    if (!email || !email.trim()) {
+      throw new BadRequestError('Email address is required.');
+    }
+    const cleanEmail = email.toLowerCase().trim();
+    const user = await userRepository.findByEmail(cleanEmail);
+
+    const { getFirebaseAuth } = require('../config/firebaseAdmin');
+    let resetLink = null;
+
+    try {
+      const auth = getFirebaseAuth();
+      if (auth) {
+        try {
+          await auth.getUserByEmail(cleanEmail);
+        } catch (e) {
+          if (user) {
+            await auth.createUser({
+              email: cleanEmail,
+              displayName: user.name,
+            });
+          }
+        }
+        resetLink = await auth.generatePasswordResetLink(cleanEmail);
+      }
+    } catch (err) {
+      console.warn('[ForgotPassword] Firebase reset link notice:', err.message);
+    }
+
+    if (!user && !resetLink) {
+      return {
+        success: true,
+        message: 'If this email is registered, password reset instructions have been dispatched.',
+      };
+    }
+
+    return {
+      success: true,
+      message: 'Password reset link generated successfully.',
+      resetLink,
+    };
+  }
 }
 
 module.exports = new AuthService();
