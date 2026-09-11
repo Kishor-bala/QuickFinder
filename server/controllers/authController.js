@@ -3,11 +3,12 @@ const authService = require('../services/authService');
 exports.register = async (req, res, next) => {
   try {
     const profilePhoto = req.file ? `/uploads/profiles/${req.file.filename}` : null;
-    const { user, token } = await authService.register(req.body, profilePhoto);
+    const { user, token, emailVerificationLink } = await authService.register(req.body, profilePhoto);
     res.status(201).json({
       message: 'Registration successful! Welcome to Quick Finder.',
       user,
       token,
+      emailVerificationLink,
     });
   } catch (err) {
     next(err);

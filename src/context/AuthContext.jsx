@@ -65,12 +65,12 @@ export const AuthProvider = ({ children }) => {
     const res = await api.post('/auth/register', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
-    const { token: receivedToken, user: receivedUser } = res.data;
+    const { token: receivedToken, user: receivedUser, emailVerificationLink } = res.data;
     localStorage.setItem('qf_token', receivedToken);
     localStorage.setItem('qf_user', JSON.stringify(receivedUser));
     setToken(receivedToken);
     setUser(receivedUser);
-    return receivedUser;
+    return { user: receivedUser, emailVerificationLink };
   };
 
   const loginWithFirebase = async (idToken, phone = null, options = {}) => {

@@ -180,8 +180,36 @@ class AuthService {
       type: 'system',
     });
 
+    // Sync with Firebase Auth & Generate Magic Email Verification Link
+    let emailVerificationLink = null;
+    try {
+      const { getFirebaseAuth } = require('../config/firebaseAdmin');
+      const auth = getFirebaseAuth();
+      if (auth) {
+        let fbUser;
+        try {
+          fbUser = await auth.createUser({
+            email: data.email.toLowerCase().trim(),
+            password: data.password,
+            displayName: data.name.trim(),
+            emailVerified: false,
+          });
+        } catch (e) {
+          try {
+            fbUser = await auth.getUserByEmail(data.email.toLowerCase().trim());
+          } catch (e2) {}
+        }
+        if (fbUser) {
+          await userRepository.updateFirebaseUid(user.id, fbUser.uid, 'local');
+        }
+        emailVerificationLink = await auth.generateEmailVerificationLink(data.email.toLowerCase().trim());
+      }
+    } catch (fbErr) {
+      console.warn('[Register] Firebase email verification link notice:', fbErr.message);
+    }
+
     const token = this.generateToken(user);
-    return { user, token };
+    return { user, token, emailVerificationLink };
   }
 
   // --- MANUAL LOGIN ---
