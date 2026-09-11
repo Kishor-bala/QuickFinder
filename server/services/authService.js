@@ -263,6 +263,33 @@ class AuthService {
       throw new UnauthorizedError('Invalid credentials. Please check your username/email and password.');
     }
 
+    // Lazy sync: create/link in Firebase Auth if legacy user record lacks firebase_uid
+    if (!user.firebase_uid) {
+      try {
+        const { getFirebaseAuth } = require('../config/firebaseAdmin');
+        const auth = getFirebaseAuth();
+        if (auth) {
+          let fbUser;
+          try {
+            fbUser = await auth.getUserByEmail(user.email);
+          } catch (e) {
+            fbUser = await auth.createUser({
+              email: user.email,
+              password: password,
+              displayName: user.name,
+              emailVerified: false,
+            });
+          }
+          if (fbUser) {
+            await userRepository.updateFirebaseUid(user.id, fbUser.uid, 'local');
+            user.firebase_uid = fbUser.uid;
+          }
+        }
+      } catch (fbErr) {
+        console.warn(`[Login] Firebase Auth lazy sync notice for ${user.email}:`, fbErr.message);
+      }
+    }
+
     const token = this.generateToken(user);
     const safeUser = await userRepository.findById(user.id);
     return { user: safeUser, token };
