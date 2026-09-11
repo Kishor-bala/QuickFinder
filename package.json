@@ -11,7 +11,7 @@
     "dev": "node scripts/dev.js",
     "dev:api": "npm run dev --prefix apps/api",
     "dev:web": "npm run dev --prefix apps/web",
-    "build": "npm run build --prefix apps/web",
+    "build": "node -e \"const fs=require('fs');const src='packages/shared';const dest='apps/api/node_modules/@quickfinder/shared';fs.mkdirSync(dest+'/src',{recursive:true});['package.json'].forEach(f=>fs.copyFileSync(src+'/'+f,dest+'/'+f));['constants.js','formatters.js','index.js','validators.js'].forEach(f=>fs.copyFileSync(src+'/src/'+f,dest+'/src/'+f));console.log('Copied @quickfinder/shared to api node_modules');\" && npm run build --prefix apps/web",
     "test": "npm run test --prefix apps/api",
     "db:seed": "npm run seed --prefix apps/api",
     "db:clear": "npm run clear-db --prefix apps/api",
