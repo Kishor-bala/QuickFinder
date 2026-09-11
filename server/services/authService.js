@@ -120,6 +120,27 @@ class AuthService {
     }
   }
 
+  async checkFbUserExists(user, email) {
+    const { getFirebaseAuth } = require('../config/firebaseAdmin');
+    const auth = getFirebaseAuth();
+    if (!auth) return true;
+    try {
+      if (user && user.firebase_uid) {
+        await auth.getUser(user.firebase_uid);
+        return true;
+      }
+      if (email) {
+        await auth.getUserByEmail(email.toLowerCase().trim());
+        return true;
+      }
+    } catch (e) {
+      if (e.code === 'auth/user-not-found' || (e.message && e.message.includes('user-not-found'))) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   // --- SIGN UP / CREATE ACCOUNT ---
   async register(data, profilePhoto = null) {
     const validation = validateRegistration(data);
@@ -131,8 +152,9 @@ class AuthService {
     // Check & purge stale/deleted email record in Firebase DB
     const existingEmail = await userRepository.findByEmail(data.email);
     if (existingEmail) {
-      if (existingEmail.is_active === 0) {
-        console.warn(`[Register] Purging deleted user record ${existingEmail.id} for email ${data.email}`);
+      const isFbActive = await this.checkFbUserExists(existingEmail, data.email);
+      if (existingEmail.is_active === 0 || !isFbActive) {
+        console.warn(`[Register] Purging orphaned/deleted user record ${existingEmail.id} for email ${data.email}`);
         await userRepository.delete(existingEmail.id);
       } else {
         throw new ConflictError('This email address is already registered. Please sign in or use another email.');
@@ -142,7 +164,8 @@ class AuthService {
     // Check & purge stale/deleted phone record
     const existingPhone = await userRepository.findByPhone(data.phone);
     if (existingPhone) {
-      if (existingPhone.is_active === 0) {
+      const isFbActive = await this.checkFbUserExists(existingPhone, existingPhone.email);
+      if (existingPhone.is_active === 0 || !isFbActive) {
         await userRepository.delete(existingPhone.id);
       } else {
         throw new ConflictError('This phone number is already registered to another account.');
@@ -152,7 +175,8 @@ class AuthService {
     // Check & purge stale/deleted user_id record
     const existingUserId = await userRepository.findByUserId(data.user_id);
     if (existingUserId) {
-      if (existingUserId.is_active === 0) {
+      const isFbActive = await this.checkFbUserExists(existingUserId, existingUserId.email);
+      if (existingUserId.is_active === 0 || !isFbActive) {
         await userRepository.delete(existingUserId.id);
       } else {
         throw new ConflictError('This User ID is already taken. Please choose another.');

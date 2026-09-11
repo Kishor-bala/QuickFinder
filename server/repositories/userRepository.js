@@ -137,6 +137,18 @@ class UserRepository {
   }
 
   async delete(id) {
+    const user = await getRecordById('users', id);
+    if (user && user.firebase_uid) {
+      try {
+        const { getFirebaseAuth } = require('../config/firebaseAdmin');
+        const auth = getFirebaseAuth();
+        if (auth) {
+          await auth.deleteUser(user.firebase_uid);
+        }
+      } catch (err) {
+        console.warn(`[UserRepository.delete] Firebase Auth deletion notice for user ${id}:`, err.message);
+      }
+    }
     return await deleteRecord('users', id);
   }
 
