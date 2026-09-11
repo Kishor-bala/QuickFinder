@@ -108,7 +108,7 @@ app.use(errorHandler);
 // Server startup and graceful shutdown lifecycle
 let server = null;
 
-if (config.env !== 'test') {
+if (config.env !== 'test' && !process.env.VERCEL) {
   server = app.listen(config.port, async () => {
     logger.info('========================================');
     logger.info(`🚀 Quick Finder API running on port ${config.port} [${config.env}]`);

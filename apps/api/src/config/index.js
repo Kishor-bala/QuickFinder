@@ -1,9 +1,16 @@
 const path = require('path');
+const fs = require('fs');
 
-// Single source of truth: load .env from the MONOREPO ROOT only.
-// No more per-app .env files — one .env rules them all.
+// Try loading .env from monorepo root if present (for local dev)
 const rootEnvPath = path.resolve(__dirname, '..', '..', '..', '..', '.env');
-require('dotenv').config({ path: rootEnvPath });
+if (fs.existsSync(rootEnvPath)) {
+  require('dotenv').config({ path: rootEnvPath });
+} else {
+  // Fallback to default dotenv lookup
+  require('dotenv').config();
+}
+
+const isVercel = Boolean(process.env.VERCEL || process.env.NOW_BUILDER);
 
 const config = {
   env: process.env.NODE_ENV || 'development',
@@ -11,7 +18,7 @@ const config = {
   jwtSecret: process.env.JWT_SECRET || 'quick_finder_super_secret_jwt_key_2026_campus_lost_and_found',
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
   corsOrigin: process.env.CORS_ORIGIN || '*',
-  uploadDir: process.env.UPLOAD_DIR || path.join(__dirname, '..', '..', 'uploads'),
+  uploadDir: process.env.UPLOAD_DIR || (isVercel ? '/tmp/uploads' : path.join(__dirname, '..', '..', 'uploads')),
   firebaseServiceAccountPath: process.env.FIREBASE_SERVICE_ACCOUNT_PATH || path.join(__dirname, 'firebase-service-account.json'),
   twoFactorApiKey: process.env.TWO_FACTOR_API_KEY || '',
   rateLimit: {
