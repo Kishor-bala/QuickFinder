@@ -12,6 +12,7 @@ router.post('/verify-otp', authRateLimiter, authController.verifyOtp);
 router.post('/verify-msg91', authRateLimiter, authController.verifyMsg91Token);
 router.post('/firebase', authRateLimiter, authController.firebaseAuth);
 router.post('/forgot-password', authRateLimiter, authController.forgotPassword);
+router.post('/resend-verification', authRateLimiter, authController.resendVerificationLink);
 router.get('/me', verifyToken, authController.getMe);
 router.put('/profile', verifyToken, upload.single('profile_photo'), authController.updateProfile);
 router.put('/change-password', verifyToken, authController.changePassword);

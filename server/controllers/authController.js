@@ -125,3 +125,14 @@ exports.forgotPassword = async (req, res, next) => {
   }
 };
 
+exports.resendVerificationLink = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    const result = await authService.resendVerificationLink(email);
+    res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+

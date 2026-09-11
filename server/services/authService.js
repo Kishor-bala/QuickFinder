@@ -159,6 +159,40 @@ class AuthService {
       }
     }
 
+    // 1. Create account in Firebase Auth
+    let fbUser = null;
+    let emailVerificationLink = null;
+    const { getFirebaseAuth } = require('../config/firebaseAdmin');
+    const auth = getFirebaseAuth();
+
+    if (auth) {
+      try {
+        fbUser = await auth.createUser({
+          email: data.email.toLowerCase().trim(),
+          password: data.password,
+          displayName: data.name.trim(),
+          emailVerified: false,
+        });
+      } catch (e) {
+        if (e.code === 'auth/email-already-exists' || (e.message && e.message.includes('already exists'))) {
+          try {
+            fbUser = await auth.getUserByEmail(data.email.toLowerCase().trim());
+          } catch (e2) {}
+        } else {
+          console.error('[Register] Firebase Auth User creation error:', e.message);
+          throw new BadRequestError(`Firebase Account Creation Error: ${e.message}`);
+        }
+      }
+
+      if (fbUser) {
+        try {
+          emailVerificationLink = await auth.generateEmailVerificationLink(data.email.toLowerCase().trim());
+        } catch (linkErr) {
+          console.warn('[Register] Email verification link notice:', linkErr.message);
+        }
+      }
+    }
+
     const salt = bcrypt.genSaltSync(10);
     const password_hash = bcrypt.hashSync(data.password, salt);
 
@@ -170,6 +204,8 @@ class AuthService {
       password_hash,
       profile_photo: profilePhoto,
       role: 'user',
+      firebase_uid: fbUser ? fbUser.uid : null,
+      email_verified: fbUser ? (fbUser.emailVerified ? 1 : 0) : 0,
     });
 
     // Send welcome notification
@@ -179,34 +215,6 @@ class AuthService {
       message: 'Your account is ready. Report lost belongings, upload found items, and let our intelligent matching algorithm work for you.',
       type: 'system',
     });
-
-    // Sync with Firebase Auth & Generate Magic Email Verification Link
-    let emailVerificationLink = null;
-    try {
-      const { getFirebaseAuth } = require('../config/firebaseAdmin');
-      const auth = getFirebaseAuth();
-      if (auth) {
-        let fbUser;
-        try {
-          fbUser = await auth.createUser({
-            email: data.email.toLowerCase().trim(),
-            password: data.password,
-            displayName: data.name.trim(),
-            emailVerified: false,
-          });
-        } catch (e) {
-          try {
-            fbUser = await auth.getUserByEmail(data.email.toLowerCase().trim());
-          } catch (e2) {}
-        }
-        if (fbUser) {
-          await userRepository.updateFirebaseUid(user.id, fbUser.uid, 'local');
-        }
-        emailVerificationLink = await auth.generateEmailVerificationLink(data.email.toLowerCase().trim());
-      }
-    } catch (fbErr) {
-      console.warn('[Register] Firebase email verification link notice:', fbErr.message);
-    }
 
     const token = this.generateToken(user);
     return { user, token, emailVerificationLink };
@@ -235,7 +243,11 @@ class AuthService {
         const { getFirebaseAuth } = require('../config/firebaseAdmin');
         const auth = getFirebaseAuth();
         if (auth) {
-          await auth.getUser(user.firebase_uid);
+          const fbUser = await auth.getUser(user.firebase_uid);
+          if (fbUser && fbUser.emailVerified && !user.email_verified) {
+            await userRepository.updateEmailVerified(user.id, true);
+            user.email_verified = 1;
+          }
         }
       } catch (fbErr) {
         if (fbErr.code === 'auth/user-not-found' || (fbErr.message && fbErr.message.includes('user-not-found'))) {
@@ -272,7 +284,11 @@ class AuthService {
         const { getFirebaseAuth } = require('../config/firebaseAdmin');
         const auth = getFirebaseAuth();
         if (auth) {
-          await auth.getUser(user.firebase_uid);
+          const fbUser = await auth.getUser(user.firebase_uid);
+          if (fbUser && fbUser.emailVerified && !user.email_verified) {
+            await userRepository.updateEmailVerified(user.id, true);
+            user.email_verified = 1;
+          }
         }
       } catch (fbErr) {
         if (fbErr.code === 'auth/user-not-found' || (fbErr.message && fbErr.message.includes('user-not-found'))) {
@@ -507,6 +523,29 @@ class AuthService {
       message: 'Password reset link generated successfully.',
       resetLink,
     };
+  }
+
+  async resendVerificationLink(email) {
+    if (!email || !email.trim()) throw new BadRequestError('Email address is required.');
+    const cleanEmail = email.toLowerCase().trim();
+    const user = await userRepository.findByEmail(cleanEmail);
+    if (!user) throw new BadRequestError('No account found with this email address.');
+
+    const { getFirebaseAuth } = require('../config/firebaseAdmin');
+    const auth = getFirebaseAuth();
+    if (!auth) throw new BadRequestError('Firebase Auth service is unavailable.');
+
+    try {
+      const emailVerificationLink = await auth.generateEmailVerificationLink(cleanEmail);
+      return {
+        success: true,
+        message: 'Firebase email verification magic link generated successfully.',
+        emailVerificationLink,
+      };
+    } catch (err) {
+      console.error('[ResendVerificationLink] Error:', err);
+      throw new BadRequestError(`Failed to generate verification link: ${err.message}`);
+    }
   }
 }
 

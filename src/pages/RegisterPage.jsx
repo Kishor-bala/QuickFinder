@@ -34,6 +34,11 @@ export default function RegisterPage() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Registration Success & Email Verification State
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
+  const [emailVerificationLink, setEmailVerificationLink] = useState('');
+  const [createdUser, setCreatedUser] = useState(null);
+
   // Google Flow State
   const [isGoogleFlow, setIsGoogleFlow] = useState(false);
   const [googleIdToken, setGoogleIdToken] = useState('');
@@ -292,8 +297,13 @@ export default function RegisterPage() {
         data.append('profile_photo', profilePhoto);
       }
 
-      await register(data);
-      navigate('/dashboard', { replace: true });
+      const res = await register(data);
+      if (res?.emailVerificationLink) {
+        setEmailVerificationLink(res.emailVerificationLink);
+        setRegistrationSuccess(true);
+      } else {
+        navigate('/dashboard', { replace: true });
+      }
     } catch (err) {
       console.error('Registration error:', err);
       setError(err.response?.data?.message || err.message || 'Registration failed. Please check your details.');
@@ -306,18 +316,73 @@ export default function RegisterPage() {
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-4 py-6 bg-slate-50">
       <div className="max-w-xl w-full my-auto space-y-5 bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-xl shadow-psg-navy/10">
         
-        {/* Header */}
-        <div className="text-center space-y-2">
-          <PsgLogo variant="light" size="lg" showTagline={true} className="justify-center" />
-          <h2 className="text-xl font-extrabold text-psg-navy tracking-tight mt-1">
-            Create Account
-          </h2>
-          <p className="text-xs text-slate-500 font-medium">
-            {isGoogleFlow
-              ? 'Complete your profile details and verify your mobile phone to finalize registration.'
-              : 'Register your profile to report lost belongings and track matches across campus.'}
-          </p>
-        </div>
+        {/* Registration Success & Verification Card */}
+        {registrationSuccess ? (
+          <div className="space-y-6 text-center animate-scale-up py-4">
+            <div className="w-16 h-16 bg-emerald-100 border-2 border-emerald-300 rounded-full flex items-center justify-center mx-auto shadow-inner text-emerald-600">
+              <CheckCircle2 className="w-10 h-10" />
+            </div>
+
+            <div className="space-y-2">
+              <span className="inline-block px-3 py-1 bg-emerald-100 border border-emerald-300 text-emerald-800 text-[11px] font-black tracking-wider uppercase rounded-full">
+                Account Successfully Created
+              </span>
+              <h2 className="text-2xl font-black text-psg-navy tracking-tight">
+                Verify Your Email Address
+              </h2>
+              <p className="text-xs text-slate-600 font-medium max-w-md mx-auto leading-relaxed">
+                Welcome to Quick Finder, <strong>{formData.name}</strong>! Your account for <strong>{formData.email}</strong> has been registered in <strong>Firebase Auth</strong> and saved to <strong>Firebase Realtime Database</strong>.
+              </p>
+            </div>
+
+            {emailVerificationLink && (
+              <div className="p-5 bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-3xl space-y-3 shadow-md text-left">
+                <div className="flex items-center gap-2 text-psg-navy">
+                  <Mail className="w-5 h-5 text-psg-blue flex-shrink-0" />
+                  <h3 className="font-extrabold text-sm">Official Firebase Verification Link</h3>
+                </div>
+                <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                  Click the button below to verify your email address via Firebase Auth. Once verified, your status will update across the platform.
+                </p>
+                <div className="pt-2 flex flex-col gap-2.5">
+                  <a
+                    href={emailVerificationLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full inline-flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm shadow-lg shadow-emerald-600/20 transition-all transform hover:-translate-y-0.5"
+                  >
+                    <span>CLICK HERE TO VERIFY EMAIL</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </a>
+                </div>
+              </div>
+            )}
+
+            <div className="pt-2 space-y-3">
+              <button
+                type="button"
+                onClick={() => navigate('/dashboard', { replace: true })}
+                className="w-full py-3.5 px-4 rounded-2xl bg-psg-navy hover:bg-slate-900 text-white font-extrabold text-sm shadow-md transition-all flex items-center justify-center gap-2 transform hover:-translate-y-0.5"
+              >
+                <span>CONTINUE TO DASHBOARD</span>
+                <ArrowRight className="w-4 h-4 text-psg-gold" />
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Header */}
+            <div className="text-center space-y-2">
+              <PsgLogo variant="light" size="lg" showTagline={true} className="justify-center" />
+              <h2 className="text-xl font-extrabold text-psg-navy tracking-tight mt-1">
+                Create Account
+              </h2>
+              <p className="text-xs text-slate-500 font-medium">
+                {isGoogleFlow
+                  ? 'Complete your profile details and verify your mobile phone to finalize registration.'
+                  : 'Register your profile to report lost belongings and track matches across campus.'}
+              </p>
+            </div>
 
         {/* Google Flow Banner */}
         {isGoogleFlow && (
@@ -1032,6 +1097,9 @@ export default function RegisterPage() {
             </Link>
           </p>
         </div>
+
+          </>
+        )}
 
       </div>
     </div>

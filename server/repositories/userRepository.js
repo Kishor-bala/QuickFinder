@@ -81,6 +81,7 @@ class UserRepository {
       is_active: 1,
       firebase_uid,
       auth_provider: provider || 'firebase',
+      email_verified: 1,
       created_at: new Date().toISOString(),
     };
 
@@ -93,7 +94,12 @@ class UserRepository {
     return await this.findById(id);
   }
 
-  async create({ name, user_id, email, phone, password_hash, profile_photo, role = 'user' }) {
+  async updateEmailVerified(id, isVerified) {
+    await updateRecord('users', id, { email_verified: isVerified ? 1 : 0 });
+    return await this.findById(id);
+  }
+
+  async create({ name, user_id, email, phone, password_hash, profile_photo, role = 'user', firebase_uid = null, email_verified = 0 }) {
     const newId = await getNextId('users');
     const newUser = {
       id: newId,
@@ -105,8 +111,9 @@ class UserRepository {
       profile_photo: profile_photo || null,
       role: role || 'user',
       is_active: 1,
-      firebase_uid: null,
+      firebase_uid: firebase_uid || null,
       auth_provider: 'local',
+      email_verified: email_verified ? 1 : 0,
       created_at: new Date().toISOString(),
     };
 
