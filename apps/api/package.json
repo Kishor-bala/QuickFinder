@@ -4,6 +4,7 @@
   "description": "Production REST API service for Quick Finder",
   "main": "src/server.js",
   "scripts": {
+    "build": "echo 'API ready'",
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
     "seed": "node seed/seedData.js",

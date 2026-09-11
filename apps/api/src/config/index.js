@@ -10,7 +10,7 @@ if (fs.existsSync(rootEnvPath)) {
   require('dotenv').config();
 }
 
-const isVercel = Boolean(process.env.VERCEL || process.env.NOW_BUILDER);
+const isVercel = Boolean(process.env.VERCEL || process.env.NOW_BUILDER || process.env.VERCEL_ENV || process.env.AWS_LAMBDA_FUNCTION_NAME);
 
 const config = {
   env: process.env.NODE_ENV || 'development',

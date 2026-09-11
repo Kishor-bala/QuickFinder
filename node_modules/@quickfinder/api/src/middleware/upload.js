@@ -13,8 +13,12 @@ const storage = multer.diskStorage({
     } else {
       dest = path.join(dest, 'items');
     }
-    if (!fs.existsSync(dest)) {
-      fs.mkdirSync(dest, { recursive: true });
+    try {
+      if (!fs.existsSync(dest)) {
+        fs.mkdirSync(dest, { recursive: true });
+      }
+    } catch (e) {
+      // Ignored if directory creation fails or exists in read-only environment
     }
     cb(null, dest);
   },

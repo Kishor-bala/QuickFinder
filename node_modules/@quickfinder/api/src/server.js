@@ -20,18 +20,22 @@ const claimRoutes = require('./routes/claimRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 
-// Ensure upload directories exist
-const uploadDirs = [
-  config.uploadDir,
-  path.join(config.uploadDir, 'items'),
-  path.join(config.uploadDir, 'profiles'),
-  path.join(config.uploadDir, 'proofs'),
-];
-uploadDirs.forEach((dir) => {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-});
+// Ensure upload directories exist safely (Vercel / serverless safe)
+try {
+  const uploadDirs = [
+    config.uploadDir,
+    path.join(config.uploadDir, 'items'),
+    path.join(config.uploadDir, 'profiles'),
+    path.join(config.uploadDir, 'proofs'),
+  ];
+  uploadDirs.forEach((dir) => {
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+  });
+} catch (err) {
+  logger.warn(`⚠️ Could not create upload directory (${err.message}). Safe fallback active.`);
+}
 
 const app = express();
 
