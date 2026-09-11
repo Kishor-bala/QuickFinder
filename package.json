@@ -2,7 +2,6 @@
   "name": "quick-finder",
   "version": "1.0.0",
   "description": "Quick Finder - Campus Lost & Found Platform",
-  "type": "commonjs",
   "main": "server/server.js",
   "scripts": {
     "start": "node server/server.js",
