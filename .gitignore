@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+dist/
+
+# Environment files & Secrets
+.env
+.env.*
+!.env.example
+*-service-account*.json
+firebase-service-account.json
+*.pem
+*.key
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Old monorepo directories (kept locally, not deployed)
+apps/
+packages/
+
+# Vercel
+.vercel
+

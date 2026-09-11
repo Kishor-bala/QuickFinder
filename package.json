@@ -1,31 +1,37 @@
 {
-  "name": "quick-finder-monorepo",
+  "name": "quick-finder",
   "version": "1.0.0",
-  "private": true,
-  "description": "Quick Finder - Production-Grade Lost & Found Management Platform",
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
+  "description": "Quick Finder - Campus Lost & Found Platform",
+  "type": "commonjs",
+  "main": "server/server.js",
   "scripts": {
-    "dev": "node scripts/dev.js",
-    "dev:api": "npm run dev --prefix apps/api",
-    "dev:web": "npm run dev --prefix apps/web",
-    "build": "node -e \"const fs=require('fs');const src='packages/shared';const dest='apps/api/node_modules/@quickfinder/shared';fs.mkdirSync(dest+'/src',{recursive:true});['package.json'].forEach(f=>fs.copyFileSync(src+'/'+f,dest+'/'+f));['constants.js','formatters.js','index.js','validators.js'].forEach(f=>fs.copyFileSync(src+'/src/'+f,dest+'/src/'+f));console.log('Copied @quickfinder/shared to api node_modules');\" && npm run build --prefix apps/web",
-    "test": "npm run test --prefix apps/api",
-    "db:seed": "npm run seed --prefix apps/api",
-    "db:clear": "npm run clear-db --prefix apps/api",
-    "lint": "npm run lint --prefix apps/web"
+    "start": "node server/server.js",
+    "dev:api": "node --watch server/server.js",
+    "dev:web": "npx vite",
+    "build": "npx vite build"
   },
-  "keywords": [
-    "monorepo",
-    "lost-and-found",
-    "production-architecture",
-    "express",
-    "react",
-    "vite",
-    "sqlite"
-  ],
-  "author": "Quick Finder Team",
-  "license": "ISC"
+  "dependencies": {
+    "axios": "^1.20.0",
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "firebase": "^12.18.0",
+    "firebase-admin": "^14.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "lucide-react": "^1.43.0",
+    "multer": "^2.3.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "react-router-dom": "^7.18.3"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "@vitejs/plugin-react": "^6.1.0",
+    "autoprefixer": "^10.5.5",
+    "postcss": "^8.5.28",
+    "tailwindcss": "^3.4.19",
+    "vite": "^8.2.2"
+  }
 }

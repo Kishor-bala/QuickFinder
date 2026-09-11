@@ -1,7 +1,7 @@
 let app;
 
 try {
-  const serverModule = require('../apps/api/src/server.js');
+  const serverModule = require('../server/server');
   app = serverModule.default || serverModule;
 } catch (err) {
   console.error('[Vercel Serverless Fatal] Error loading API server:', err);
