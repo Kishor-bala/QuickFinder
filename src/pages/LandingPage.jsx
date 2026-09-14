@@ -19,42 +19,42 @@ export default function LandingPage() {
     <div className="space-y-16 sm:space-y-24 pb-24">
       
       {/* Hero Section */}
-      <section className="relative overflow-hidden pt-4 pb-6 sm:pt-6 sm:pb-10 flex flex-col items-center justify-center">
+      <section className="relative overflow-hidden pt-1 pb-2 flex flex-col items-center justify-center">
         {/* Soft Background Glow */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-96 bg-gradient-to-b from-blue-100/60 via-amber-100/30 to-transparent blur-3xl pointer-events-none -z-10 rounded-full" />
 
-        <div className="max-w-5xl mx-auto px-4 text-center flex flex-col items-center space-y-2 sm:space-y-3">
+        <div className="max-w-5xl mx-auto px-4 text-center flex flex-col items-center space-y-1 sm:space-y-1.5">
           
           {/* Institutional Header */}
           <div className="animate-fade-in-down">
-            <span className="text-[11px] sm:text-xs font-extrabold uppercase tracking-widest text-psg-blue bg-blue-50/80 border border-blue-200/60 px-3.5 py-1 rounded-full">
+            <span className="text-[11px] sm:text-xs font-extrabold uppercase tracking-widest text-psg-blue bg-blue-50/80 border border-blue-200/60 px-3.5 py-0.5 rounded-full">
               PSG COLLEGE OF ARTS AND SCIENCE
             </span>
           </div>
 
           {/* Official PSG Crest Logo Image */}
-          <div className="animate-fade-in-down animation-delay-100">
+          <div className="animate-fade-in-down animation-delay-100 -mb-1">
             <img
               src="/psg-logo.svg"
               alt="PSG College Crest"
-              className="h-14 sm:h-18 w-auto mx-auto drop-shadow-md transition-transform hover:scale-105"
+              className="h-12 sm:h-16 w-auto mx-auto drop-shadow-md transition-transform hover:scale-105"
             />
           </div>
 
-          {/* QuickFinder Logo Image (Maintained Large Size with Compact Vertical Spacing) */}
-          <div className="animate-fade-in-up -my-3 sm:-my-6 flex flex-col items-center">
+          {/* QuickFinder Logo Image (Extra Large with Aggressively Tight Vertical Margins) */}
+          <div className="animate-fade-in-up -my-6 sm:-my-12 lg:-my-16 flex flex-col items-center">
             <img
               src="/quickfinder-logo.png"
               alt="QUICK FINDER"
               className="h-32 sm:h-52 lg:h-64 max-w-[92vw] w-auto mx-auto object-contain transition-transform hover:scale-105 filter drop-shadow-[0_6px_20px_rgba(0,0,0,0.12)]"
             />
-            <p className="text-base sm:text-xl lg:text-2xl font-black text-slate-800 tracking-tight font-['Outfit'] -mt-2 sm:-mt-4">
+            <p className="text-base sm:text-xl lg:text-2xl font-black text-slate-800 tracking-tight font-['Outfit'] -mt-6 sm:-mt-10 lg:-mt-14">
               Campus Lost & Found Management Hub
             </p>
           </div>
 
           {/* Description */}
-          <p className="text-xs sm:text-sm text-slate-600 max-w-2xl mx-auto leading-relaxed font-medium animate-fade-in-up animation-delay-100 pt-1">
+          <p className="text-xs sm:text-sm text-slate-600 max-w-2xl mx-auto leading-relaxed font-medium animate-fade-in-up animation-delay-100 pt-0.5">
             Connect with students, faculty, and campus security. Automatically match lost belongings with found items across the PSG CAS campus through multi-attribute verification.
           </p>
 
