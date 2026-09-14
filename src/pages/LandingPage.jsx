@@ -41,12 +41,12 @@ export default function LandingPage() {
             />
           </div>
 
-          {/* QuickFinder Logo Image (Prominent Hero Display) */}
+          {/* QuickFinder Logo Image (Extra-Large Hero Display) */}
           <div className="space-y-3 animate-fade-in-up pt-2">
             <img
               src="/quickfinder-logo.png"
               alt="QUICK FINDER"
-              className="h-20 sm:h-32 lg:h-40 w-auto mx-auto object-contain transition-transform hover:scale-105 filter drop-shadow-[0_4px_16px_rgba(0,0,0,0.15)]"
+              className="h-32 sm:h-52 lg:h-64 max-w-[92vw] w-auto mx-auto object-contain transition-transform hover:scale-105 filter drop-shadow-[0_6px_20px_rgba(0,0,0,0.15)]"
             />
             <p className="text-lg sm:text-2xl font-black text-slate-800 tracking-tight font-['Outfit']">
               Campus Lost & Found Management Hub
