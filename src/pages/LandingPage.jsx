@@ -41,11 +41,13 @@ export default function LandingPage() {
             />
           </div>
 
-          {/* Title: QUICK FINDER */}
-          <div className="space-y-1 animate-fade-in-up">
-            <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black text-psg-navy tracking-tight leading-[1.05] font-['Outfit']">
-              <span className="text-psg-blue">QUICK</span> <span className="text-psg-navy">FINDER</span>
-            </h1>
+          {/* QuickFinder Logo Image (Prominent Hero Display) */}
+          <div className="space-y-3 animate-fade-in-up pt-2">
+            <img
+              src="/quickfinder-logo.png"
+              alt="QUICK FINDER"
+              className="h-20 sm:h-32 lg:h-40 w-auto mx-auto object-contain transition-transform hover:scale-105 filter drop-shadow-[0_4px_16px_rgba(0,0,0,0.15)]"
+            />
             <p className="text-lg sm:text-2xl font-black text-slate-800 tracking-tight font-['Outfit']">
               Campus Lost & Found Management Hub
             </p>
