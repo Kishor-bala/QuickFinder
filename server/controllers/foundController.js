@@ -13,7 +13,7 @@ exports.createFoundItem = async (req, res, next) => {
     }
 
     const images = (req.files && req.files.length > 0)
-      ? req.files.map(f => `/uploads/items/${f.filename}`)
+      ? req.files.map(f => `data:${f.mimetype || 'image/jpeg'};base64,${f.buffer.toString('base64')}`)
       : [];
 
     const item = await itemRepository.createFound({

@@ -109,6 +109,9 @@ app.use('/api/matches', getHandler(matchRoutes));
 app.use('/api/claims', getHandler(claimRoutes));
 app.use('/api/notifications', getHandler(notificationRoutes));
 app.use('/api/admin', getHandler(adminRoutes));
+app.use('/api/chat', getHandler(require('./routes/chatRoutes')));
+app.use('/api/handover', getHandler(require('./routes/handoverRoutes')));
+app.use('/api/ai', getHandler(require('./routes/aiRoutes')));
 
 // 404 Handler for unmatched endpoints
 app.use((req, res) => {
@@ -142,6 +145,11 @@ if (config.env !== 'test' && !process.env.VERCEL) {
       logger.info('✅ Firebase connection warmed up successfully.');
     } catch (err) {
       logger.warn(`⚠️ Firebase warm-up failed: ${err.message}`);
+    }
+
+    if (server) {
+      server.keepAliveTimeout = 65000;
+      server.headersTimeout = 66000;
     }
 
     // Keep-alive ping: pings the server's own /health endpoint every 14 minutes

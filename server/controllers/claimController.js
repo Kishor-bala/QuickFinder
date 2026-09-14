@@ -3,7 +3,9 @@ const claimService = require('../services/claimService');
 exports.createClaim = async (req, res, next) => {
   try {
     const { found_item_id, message, match_id } = req.body;
-    const proof_image = req.file ? `/uploads/proofs/${req.file.filename}` : null;
+    const proof_image = req.file
+      ? `data:${req.file.mimetype || 'image/jpeg'};base64,${req.file.buffer.toString('base64')}`
+      : null;
 
     const claim = await claimService.submitClaim({
       found_item_id: parseInt(found_item_id, 10),

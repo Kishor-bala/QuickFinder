@@ -5,6 +5,7 @@
   "main": "server/server.js",
   "scripts": {
     "start": "node server/server.js",
+    "dev": "npx concurrently \"npm run dev:api\" \"npm run dev:web\"",
     "dev:api": "node --watch server/server.js",
     "dev:web": "npx vite",
     "build": "npx vite build"

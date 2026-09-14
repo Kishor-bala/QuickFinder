@@ -15,4 +15,10 @@ router.get('/claims', adminController.getClaims);
 router.delete('/items/:type/:id', adminController.deleteItem);
 router.put('/items/:type/:id/resolve', adminController.resolveItem);
 
+// New Analytics, Announcements & Audit Routes
+router.get('/analytics', adminController.getAnalytics);
+router.get('/announcements', adminController.getAnnouncements);
+router.post('/announcements', adminController.createAnnouncement);
+router.get('/audit-logs', adminController.getAuditLogs);
+
 module.exports = router;

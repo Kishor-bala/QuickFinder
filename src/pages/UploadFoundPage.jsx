@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Upload, CheckCircle2, Sparkles, AlertCircle, ArrowLeft, MapPin, Shield } from 'lucide-react';
+import { Upload, CheckCircle2, Sparkles, AlertCircle, ArrowLeft, Shield, Lock, Wand2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import ImageUploader from '../components/ImageUploader';
@@ -15,37 +15,66 @@ export default function UploadFoundPage() {
     brand: '',
     model: '',
     colour: '',
+    building: 'Main Block',
     found_date: new Date().toLocaleDateString('en-CA'),
     found_time: '',
     found_location: '',
     description: '',
-    identifying_details: '',
-    additional_notes: '',
+    handoverOption: 'I currently have the item',
+    currentLocation: 'Main Administrative Block',
+    private_identifying_details: '',
     contact_number: user?.phone || '',
     contact_email: user?.email || '',
   });
 
+  const [aiText, setAiText] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [successData, setSuccessData] = useState(null);
 
   const categories = [
-    'Mobile',
-    'Laptop',
-    'Wallet',
-    'ID Card',
-    'Keys',
-    'Bag',
-    'Books',
-    'Electronics',
-    'Accessories',
-    'Other',
+    'Mobile', 'Laptop', 'Wallet', 'ID Card', 'Keys', 'Bag', 'Books & Stationery', 'Electronics', 'Accessories', 'Water Bottles & Containers', 'Other'
+  ];
+
+  const campusBuildings = [
+    'Main Block', 'CSE Block', 'ECE Block', 'Mech Block', 'Library', 'Canteen', 'Hostel Block', 'Sports Ground', 'Auditorium', 'Parking Area'
+  ];
+
+  const handoverOptions = [
+    'I currently have the item',
+    'Handed to Campus Security (Main Gate)',
+    'Deposited at CSE Department Office',
+    'Deposited at Central Lost & Found Office',
+    'Deposited at Hostel Office'
   ];
 
   const handleChange = (e) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
     setError('');
+  };
+
+  const handleAiExtract = async () => {
+    if (!aiText) return;
+    setAiLoading(true);
+    try {
+      const res = await api.post('/ai/extract', { text: aiText });
+      const ext = res.data.extracted || {};
+      setFormData(prev => ({
+        ...prev,
+        category: ext.category || prev.category,
+        colour: ext.color || prev.colour,
+        brand: ext.brand || prev.brand,
+        found_location: ext.location || prev.found_location,
+        building: ext.building || prev.building,
+        description: aiText
+      }));
+    } catch {
+      setFormData(prev => ({ ...prev, description: aiText }));
+    } finally {
+      setAiLoading(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -88,72 +117,35 @@ export default function UploadFoundPage() {
   if (successData) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-16 text-center space-y-6 animate-fade-in">
-        <div className="w-20 h-20 rounded-3xl bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-inner border border-emerald-200">
+        <div className="w-20 h-20 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto text-3xl shadow-lg">
           <CheckCircle2 className="w-10 h-10" />
         </div>
+        <h2 className="text-3xl font-black text-slate-900">Found Item Published!</h2>
+        <p className="text-slate-600 text-sm max-w-md mx-auto">
+          Thank you for helping keep campus trustworthy! Your report is now live and candidate owners will be auto-notified.
+        </p>
 
-        <div className="space-y-2">
-          <h1 className="text-3xl font-black text-psg-navy tracking-tight font-['Outfit']">
-            Item Uploaded Successfully
-          </h1>
-          <p className="text-base text-slate-600 max-w-md mx-auto font-medium">
-            Thank you for helping keep the PSG Tech campus honest!
-          </p>
-        </div>
-
-        {successData.matchesFound > 0 ? (
-          <div className="p-6 bg-blue-50/80 border border-psg-blue/30 rounded-3xl text-left space-y-3 shadow-md">
-            <div className="flex items-center gap-2 text-psg-navy font-extrabold text-base">
-              <Sparkles className="w-5 h-5 text-psg-gold" />
-              <span>Potential Owner Found!</span>
-            </div>
-            <p className="text-xs text-slate-700 leading-relaxed font-medium">
-              Our automated matching system detected <strong>{successData.matchesFound}</strong> previously reported lost item(s) that match what you uploaded. We have notified the owner(s) to verify and submit ownership proof.
-            </p>
-            <div className="pt-2 flex items-center gap-3">
-              <Link
-                to={`/items/${successData.item.id}`}
-                className="px-5 py-2.5 rounded-xl bg-psg-navy hover:bg-slate-900 text-white font-extrabold text-xs shadow-md"
-              >
-                View Your Listing
-              </Link>
-              <Link
-                to="/my-items"
-                className="px-5 py-2.5 rounded-xl bg-white border border-slate-200 text-psg-navy font-bold text-xs hover:bg-slate-50"
-              >
-                Go to My Items
-              </Link>
-            </div>
-          </div>
-        ) : (
-          <div className="p-6 bg-slate-50 border border-slate-200 rounded-3xl text-left space-y-2">
-            <p className="text-xs text-slate-600 leading-relaxed font-medium">
-              Your item has been uploaded to the PSG Quick Finder directory. We will notify you when a matching lost item report is filed.
-            </p>
-            <div className="pt-2 flex items-center gap-3">
-              <Link
-                to={`/items/${successData.item.id}`}
-                className="px-5 py-2.5 rounded-xl bg-psg-blue hover:bg-psg-royal text-white font-extrabold text-xs shadow-md"
-              >
-                View Listing Details
-              </Link>
-              <Link
-                to="/dashboard"
-                className="px-5 py-2.5 rounded-xl bg-white border border-slate-200 text-psg-navy font-bold text-xs hover:bg-slate-50"
-              >
-                Return to Dashboard
-              </Link>
-            </div>
+        {successData.matchesFound > 0 && (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-amber-900 text-sm font-bold inline-flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-amber-600 animate-bounce" />
+            <span>🎉 Discovered {successData.matchesFound} potential lost report matches!</span>
           </div>
         )}
+
+        <div className="flex justify-center gap-4 pt-4">
+          <Link to="/my-items" className="px-6 py-3 bg-brand-600 hover:bg-brand-700 text-white font-bold text-sm rounded-xl transition">
+            View My Reports
+          </Link>
+          <Link to="/find" className="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm rounded-xl transition">
+            Browse All Items
+          </Link>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-      
-      {/* Back button */}
       <button
         type="button"
         onClick={() => navigate(-1)}
@@ -163,250 +155,222 @@ export default function UploadFoundPage() {
         Back to Dashboard
       </button>
 
-      {/* Header Banner */}
-      <div className="bg-psg-navy rounded-3xl p-6 sm:p-8 text-white shadow-2xl border border-blue-900/60 relative overflow-hidden">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3.5 z-10">
-            <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur border border-psg-gold/40 flex items-center justify-center text-psg-gold shadow">
-              <Upload className="w-6 h-6 stroke-[2.5]" />
-            </div>
-            <div>
-              <span className="text-[10px] font-extrabold uppercase tracking-widest text-psg-gold">
-                PSG TECH • FOUND PROPERTY UPLOAD
-              </span>
-              <h1 className="text-2xl sm:text-3xl font-black tracking-tight font-['Outfit']">
-                Upload Found Belonging
-              </h1>
-            </div>
+      {/* Header */}
+      <div className="bg-gradient-to-r from-emerald-700 to-teal-800 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
+        <div className="relative z-10 space-y-2">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-emerald-200 text-xs font-bold backdrop-blur-md">
+            <Shield className="w-4 h-4" /> Campus Found Item Registry
           </div>
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight">Report a Found Item</h1>
+          <p className="text-emerald-100 text-sm max-w-xl">
+            Help reconnect items with their rightful owners. You can keep the item safe or hand it over to an authorized campus office.
+          </p>
         </div>
-        <p className="text-xs sm:text-sm text-slate-300 mt-3 max-w-xl leading-relaxed z-10 font-medium">
-          Enter details of the item found on campus. Your contact details remain confidential until an ownership claim is verified.
-        </p>
       </div>
 
-      {/* Upload Form */}
-      <form onSubmit={handleSubmit} className="bg-white rounded-3xl p-6 sm:p-10 border border-slate-200 shadow-xl space-y-6">
+      {/* AI Quick Assistant */}
+      <div className="bg-emerald-50/70 border border-emerald-200 rounded-3xl p-6 space-y-3">
+        <div className="flex items-center gap-2 text-emerald-900 font-bold text-sm">
+          <Wand2 className="w-5 h-5 text-emerald-600" />
+          <span>AI Quick-Report Assistant</span>
+        </div>
+        <p className="text-xs text-emerald-800">
+          Paste a quick sentence (e.g. <em>"Found black Casio watch at canteen table 4"</em>) and AI will auto-fill your report fields!
+        </p>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={aiText}
+            onChange={(e) => setAiText(e.target.value)}
+            placeholder="e.g. Found silver keys near Library ground floor"
+            className="flex-1 px-4 py-2.5 rounded-xl border border-emerald-300 bg-white text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+          />
+          <button
+            type="button"
+            onClick={handleAiExtract}
+            disabled={aiLoading || !aiText}
+            className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition flex items-center gap-1.5 disabled:opacity-50"
+          >
+            {aiLoading ? 'Extracting...' : 'Auto-Fill'}
+          </button>
+        </div>
+      </div>
+
+      {error && (
+        <div className="bg-rose-50 border border-rose-200 text-rose-700 px-4 py-3 rounded-2xl flex items-center gap-3 text-sm">
+          <AlertCircle className="w-5 h-5 flex-shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+
+      {/* Form */}
+      <form onSubmit={handleSubmit} className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6">
         
-        {error && (
-          <div className="flex items-start gap-2.5 p-4 bg-rose-50 border border-rose-200 text-rose-700 rounded-2xl text-xs font-medium">
-            <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-            <span className="leading-relaxed">{error}</span>
-          </div>
-        )}
+        {/* Section 1: Public Information */}
+        <div className="space-y-4">
+          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2 border-b pb-2">
+            <Upload className="w-5 h-5 text-emerald-600" />
+            Public Found Item Overview
+          </h2>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-          
-          {/* Item Name */}
-          <div className="sm:col-span-2">
-            <label className="block text-xs font-extrabold uppercase tracking-wider text-psg-navy mb-1.5">
-              Item Name *
-            </label>
-            <input
-              type="text"
-              name="item_name"
-              required
-              value={formData.item_name}
-              onChange={handleChange}
-              placeholder="e.g. Wildcraft Backpack or Black Samsung Smartphone"
-              className="w-full px-4 py-3 rounded-xl border border-slate-300 text-sm focus:border-psg-blue focus:ring-2 focus:ring-psg-blue/20 outline-none transition font-semibold"
-            />
-          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Item Title *</label>
+              <input
+                type="text"
+                name="item_name"
+                value={formData.item_name}
+                onChange={handleChange}
+                placeholder="e.g. Found Casio Watch"
+                required
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+              />
+            </div>
 
-          {/* Category */}
-          <div>
-            <label className="block text-xs font-extrabold uppercase tracking-wider text-psg-navy mb-1.5">
-              Category *
-            </label>
-            <select
-              name="category"
-              required
-              value={formData.category}
-              onChange={handleChange}
-              className="w-full px-4 py-3 rounded-xl border border-slate-300 text-sm focus:border-psg-blue focus:ring-2 focus:ring-psg-blue/20 outline-none transition bg-white cursor-pointer font-semibold"
-            >
-              {categories.map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
-          </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Category *</label>
+              <select
+                name="category"
+                value={formData.category}
+                onChange={handleChange}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white"
+              >
+                {categories.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
 
-          {/* Colour */}
-          <div>
-            <label className="block text-xs font-extrabold uppercase tracking-wider text-psg-navy mb-1.5">
-              Colour
-            </label>
-            <input
-              type="text"
-              name="colour"
-              value={formData.colour}
-              onChange={handleChange}
-              placeholder="e.g. Black, Navy Blue, Silver"
-              className="w-full px-4 py-3 rounded-xl border border-slate-300 text-sm focus:border-psg-blue outline-none transition"
-            />
-          </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Brand / Color</label>
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="text"
+                  name="brand"
+                  value={formData.brand}
+                  onChange={handleChange}
+                  placeholder="Brand"
+                  className="px-3 py-2.5 rounded-xl border border-slate-200 text-sm outline-none"
+                />
+                <input
+                  type="text"
+                  name="colour"
+                  value={formData.colour}
+                  onChange={handleChange}
+                  placeholder="Color"
+                  className="px-3 py-2.5 rounded-xl border border-slate-200 text-sm outline-none"
+                />
+              </div>
+            </div>
 
-          {/* Brand */}
-          <div>
-            <label className="block text-xs font-extrabold uppercase tracking-wider text-psg-navy mb-1.5">
-              Brand / Manufacturer
-            </label>
-            <input
-              type="text"
-              name="brand"
-              value={formData.brand}
-              onChange={handleChange}
-              placeholder="e.g. Samsung, Apple, Wildcraft, Dell"
-              className="w-full px-4 py-3 rounded-xl border border-slate-300 text-sm focus:border-psg-blue outline-none transition"
-            />
-          </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Handover Status *</label>
+              <select
+                name="handoverOption"
+                value={formData.handoverOption}
+                onChange={handleChange}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white"
+              >
+                {handoverOptions.map(h => <option key={h} value={h}>{h}</option>)}
+              </select>
+            </div>
 
-          {/* Model */}
-          <div>
-            <label className="block text-xs font-extrabold uppercase tracking-wider text-psg-navy mb-1.5">
-              Model
-            </label>
-            <input
-              type="text"
-              name="model"
-              value={formData.model}
-              onChange={handleChange}
-              placeholder="e.g. Galaxy S23, Air M2"
-              className="w-full px-4 py-3 rounded-xl border border-slate-300 text-sm focus:border-psg-blue outline-none transition"
-            />
-          </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Campus Building *</label>
+              <select
+                name="building"
+                value={formData.building}
+                onChange={handleChange}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white"
+              >
+                {campusBuildings.map(b => <option key={b} value={b}>{b}</option>)}
+              </select>
+            </div>
 
-          {/* Found Date */}
-          <div>
-            <label className="block text-xs font-extrabold uppercase tracking-wider text-psg-navy mb-1.5">
-              Found Date *
-            </label>
-            <input
-              type="date"
-              name="found_date"
-              required
-              max={new Date().toLocaleDateString('en-CA')}
-              value={formData.found_date}
-              onChange={handleChange}
-              className="w-full px-4 py-3 rounded-xl border border-slate-300 text-sm focus:border-psg-blue outline-none transition cursor-pointer"
-            />
-          </div>
-
-          {/* Found Time */}
-          <div>
-            <label className="block text-xs font-extrabold uppercase tracking-wider text-psg-navy mb-1.5">
-              Found Time
-            </label>
-            <input
-              type="time"
-              name="found_time"
-              value={formData.found_time}
-              onChange={handleChange}
-              className="w-full px-4 py-3 rounded-xl border border-slate-300 text-sm focus:border-psg-blue outline-none transition cursor-pointer"
-            />
-          </div>
-
-          {/* Found Location (Manual Free Text Input as requested) */}
-          <div className="sm:col-span-2">
-            <label className="block text-xs font-extrabold uppercase tracking-wider text-psg-navy mb-1.5">
-              Campus Found Location * (Type Manually)
-            </label>
-            <div className="relative">
-              <MapPin className="w-4 h-4 text-psg-blue absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Exact Found Location *</label>
               <input
                 type="text"
                 name="found_location"
-                required
                 value={formData.found_location}
                 onChange={handleChange}
-                placeholder="e.g. Central Library Table 4, GRD Auditorium Entrance, Canteen, Hostel Mess"
-                className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 text-sm focus:border-psg-blue focus:ring-2 focus:ring-psg-blue/20 outline-none transition"
+                placeholder="e.g. Canteen table 4"
+                required
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Date Found *</label>
+              <input
+                type="date"
+                name="found_date"
+                value={formData.found_date}
+                onChange={handleChange}
+                required
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Time Found</label>
+              <input
+                type="text"
+                name="found_time"
+                value={formData.found_time}
+                onChange={handleChange}
+                placeholder="e.g. 11:15 AM"
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm outline-none"
               />
             </div>
           </div>
 
-          {/* Detailed Description */}
-          <div className="sm:col-span-2">
-            <label className="block text-xs font-extrabold uppercase tracking-wider text-psg-navy mb-1.5">
-              General Appearance & Description
-            </label>
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">Public Description</label>
             <textarea
               name="description"
               rows={3}
               value={formData.description}
               onChange={handleChange}
-              placeholder="Describe general appearance, condition, or items found together."
-              className="w-full px-4 py-3 rounded-xl border border-slate-300 text-sm focus:border-psg-blue outline-none transition"
+              placeholder="Broad description of the found item..."
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm outline-none"
             />
           </div>
-
-          {/* Private Identifying Details */}
-          <div className="sm:col-span-2">
-            <label className="block text-xs font-extrabold uppercase tracking-wider text-psg-navy mb-1.5">
-              Private Verification Marks (Hidden from public to verify claims)
-            </label>
-            <input
-              type="text"
-              name="identifying_details"
-              value={formData.identifying_details}
-              onChange={handleChange}
-              placeholder="Private detail to confirm real owner (e.g. specific sticker, lockscreen image, contents)"
-              className="w-full px-4 py-3 rounded-xl border border-slate-300 text-sm focus:border-psg-blue outline-none transition"
-            />
-          </div>
-
-          {/* Additional Notes / Custody */}
-          <div className="sm:col-span-2">
-            <label className="block text-xs font-extrabold uppercase tracking-wider text-psg-navy mb-1.5">
-              Current Custody / Notes
-            </label>
-            <input
-              type="text"
-              name="additional_notes"
-              value={formData.additional_notes}
-              onChange={handleChange}
-              placeholder="e.g. Deposited with PSG Security Desk, or kept with Finder at Hostel Block B"
-              className="w-full px-4 py-3 rounded-xl border border-slate-300 text-sm focus:border-psg-blue outline-none transition"
-            />
-          </div>
-
-          {/* Item Photos */}
-          <div className="sm:col-span-2">
-            <label className="block text-xs font-extrabold uppercase tracking-wider text-psg-navy mb-1.5">
-              Item Photographs (Upload 1 or more photos)
-            </label>
-            <ImageUploader images={images} setImages={setImages} maxFiles={5} />
-          </div>
-
         </div>
 
-        {/* Submit Button */}
-        <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            className="px-5 py-3 rounded-xl text-slate-600 hover:bg-slate-100 font-bold text-xs"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={loading}
-            className="px-8 py-3.5 rounded-xl bg-psg-navy hover:bg-slate-900 text-white border-2 border-psg-gold font-extrabold text-sm shadow-lg flex items-center gap-2 transition-all disabled:opacity-60"
-          >
-            {loading ? (
-              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-            ) : (
-              <>
-                <Upload className="w-4 h-4 text-psg-gold" />
-                <span>UPLOAD FOUND ITEM</span>
-              </>
-            )}
-          </button>
+        {/* Section 2: Private Identifying Details */}
+        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-3">
+          <div className="flex items-center gap-2 text-slate-900 font-bold text-sm">
+            <Lock className="w-4 h-4 text-emerald-600" />
+            <span>Private Verification Notes (Hidden from Public)</span>
+          </div>
+          <p className="text-xs text-slate-500">
+            Note any secret identifying marks (e.g., sticker inside cover, damage, contents) to evaluate claimant ownership requests.
+          </p>
+          <input
+            type="text"
+            name="private_identifying_details"
+            value={formData.private_identifying_details}
+            onChange={handleChange}
+            placeholder="e.g. Small scratch near charger port, keychain attached"
+            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm bg-white outline-none"
+          />
         </div>
 
+        {/* Section 3: Photo Upload */}
+        <div>
+          <label className="block text-xs font-bold text-slate-700 mb-2">Item Photographs</label>
+          <ImageUploader images={images} setImages={setImages} maxImages={4} />
+        </div>
+
+        {/* Submit */}
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm rounded-2xl shadow-lg shadow-emerald-500/25 transition flex items-center justify-center gap-2 disabled:opacity-50"
+        >
+          <Shield className="w-5 h-5" />
+          <span>{loading ? 'PUBLISHING REPORT...' : 'PUBLISH FOUND ITEM REPORT'}</span>
+        </button>
       </form>
-
     </div>
   );
 }

@@ -59,7 +59,7 @@ exports.getClaims = async (req, res, next) => {
 exports.deleteItem = async (req, res, next) => {
   try {
     const { type, id } = req.params;
-    const result = await adminService.deleteItem(type, id);
+    const result = await adminService.deleteItem(type, id, req.user.id);
     res.status(200).json(result);
   } catch (err) {
     next(err);
@@ -69,8 +69,45 @@ exports.deleteItem = async (req, res, next) => {
 exports.resolveItem = async (req, res, next) => {
   try {
     const { type, id } = req.params;
-    const result = await adminService.resolveItem(type, id);
+    const result = await adminService.resolveItem(type, id, req.user.id);
     res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.getAnalytics = async (req, res, next) => {
+  try {
+    const analytics = await adminService.getHotspotAnalytics();
+    res.status(200).json({ analytics });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.createAnnouncement = async (req, res, next) => {
+  try {
+    const { title, content, priority } = req.body;
+    const announcement = await adminService.createAnnouncement(title, content, priority, req.user.id);
+    res.status(201).json({ announcement });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.getAnnouncements = async (req, res, next) => {
+  try {
+    const announcements = await adminService.getAnnouncements();
+    res.status(200).json({ announcements });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.getAuditLogs = async (req, res, next) => {
+  try {
+    const logs = await adminService.getAuditLogs();
+    res.status(200).json({ logs });
   } catch (err) {
     next(err);
   }

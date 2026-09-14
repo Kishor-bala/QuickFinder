@@ -1,13 +1,14 @@
 const matchRepository = require('../repositories/matchRepository');
 const notificationRepository = require('../repositories/notificationRepository');
 const itemRepository = require('../repositories/itemRepository');
+const { embeddingProvider } = require('../config/aiProvider');
 const {
   LOCATION_SYNONYMS,
   COLOR_SYNONYMS,
   MATCHING_CONFIG,
 } = require('../shared');
 
-// Normalize text: lowercase, remove non-alphanumeric, trim
+// Normalize text
 function normalizeText(text) {
   if (!text) return '';
   return text
@@ -17,7 +18,6 @@ function normalizeText(text) {
     .trim();
 }
 
-// Tokenize text into words, removing common stopwords
 function getTokens(text) {
   const norm = normalizeText(text);
   if (!norm) return [];
@@ -25,7 +25,6 @@ function getTokens(text) {
   return norm.split(' ').filter(w => w.length > 1 && !stopwords.has(w));
 }
 
-// Calculate token similarity (Jaccard + substring presence)
 function calculateTokenSimilarity(str1, str2) {
   const s1 = normalizeText(str1);
   const s2 = normalizeText(str2);
@@ -45,7 +44,6 @@ function calculateTokenSimilarity(str1, str2) {
     if (set2.has(token)) {
       intersection++;
     } else {
-      // Partial prefix/suffix match for tokens >= 4 chars
       for (const t2 of set2) {
         if (t2.length >= 4 && (t2.includes(token) || token.includes(t2))) {
           intersection += 0.5;
@@ -59,10 +57,10 @@ function calculateTokenSimilarity(str1, str2) {
   return Math.min(1.0, intersection / union);
 }
 
-// Check location synonym match
 function areLocationsSynonymous(loc1, loc2) {
   const l1 = normalizeText(loc1);
   const l2 = normalizeText(loc2);
+  if (!l1 || !l2) return false;
   if (l1 === l2) return true;
   if (l1.includes(l2) || l2.includes(l1)) return true;
 
@@ -74,7 +72,6 @@ function areLocationsSynonymous(loc1, loc2) {
   return false;
 }
 
-// Check color family match
 function areColorsMatching(c1, c2) {
   if (!c1 || !c2) return false;
   const col1 = normalizeText(c1);
@@ -90,13 +87,12 @@ function areColorsMatching(c1, c2) {
   return false;
 }
 
-// Calculate date proximity score
 function calculateDateScore(dateStr1, dateStr2) {
   if (!dateStr1 || !dateStr2) return 0;
   try {
     const s1 = String(dateStr1).split('T')[0];
     const s2 = String(dateStr2).split('T')[0];
-    if (s1 === s2) return 15; // Same calendar day: 15%
+    if (s1 === s2) return 10;
 
     const [y1, m1, d1] = s1.split('-').map(Number);
     const [y2, m2, d2] = s2.split('-').map(Number);
@@ -104,10 +100,10 @@ function calculateDateScore(dateStr1, dateStr2) {
     const date2 = new Date(y2, m2 - 1, d2);
     const diffDays = Math.round(Math.abs((date1 - date2) / (1000 * 60 * 60 * 24)));
 
-    if (diffDays === 0) return 15; // Same day: 15%
-    if (diffDays <= 2) return 12; // Within 2 days: 12%
-    if (diffDays <= 5) return 8;  // Within 5 days: 8%
-    if (diffDays <= 10) return 4; // Within 10 days: 4%
+    if (diffDays === 0) return 10;
+    if (diffDays <= 2) return 8;
+    if (diffDays <= 5) return 5;
+    if (diffDays <= 10) return 2;
     return 0;
   } catch {
     return 0;
@@ -117,130 +113,130 @@ function calculateDateScore(dateStr1, dateStr2) {
 class MatchingService {
   calculateMatch(lostItem, foundItem) {
     let score = 0;
-    const reasons = [];
-    const factorBreakdown = {};
+    const matchedSignals = [];
+    const missingSignals = [];
 
-    // Mandatory Category Filter: If categories are totally different and neither is 'Other', hard penalty
+    // Category Match (Weight: 15%)
     const catLost = normalizeText(lostItem.category);
     const catFound = normalizeText(foundItem.category);
-    const categoryMatches = (catLost === catFound) || catLost === 'other' || catFound === 'other';
+    const categoryMatches = (catLost === catFound) || catLost === 'other' || catFound === 'other' || catLost === 'others' || catFound === 'others';
 
     if (!categoryMatches) {
       return {
         score: 0,
-        reasons: ['Different categories'],
-        factorBreakdown: { category: 0, name: 0, location: 0, date: 0, colour: 0, brand: 0, details: 0 },
+        confidenceLevel: 'Weak',
+        matchedSignals: [],
+        missingSignals: ['Different categories'],
+        explanation: 'Category mismatch prevents automatic match.',
+        factorBreakdown: { category: 0, description: 0, location: 0, brandModel: 0, dateTime: 0, color: 0, visual: 0 },
       };
     }
 
-    if (catLost === catFound && catLost !== 'other') {
-      reasons.push(`Same category (${lostItem.category})`);
-    }
-
-    // 1. Item Name Similarity (Weight: 30%)
-    const nameSim = calculateTokenSimilarity(lostItem.item_name, foundItem.item_name);
-    const nameScore = Math.round(nameSim * 30);
-    score += nameScore;
-    factorBreakdown.name = nameScore;
-    if (nameScore >= 20) {
-      reasons.push('High item name match');
-    } else if (nameScore >= 10) {
-      reasons.push('Similar item name');
-    }
-
-    // 2. Location Match (Weight: 25%)
-    let locationScore = 0;
-    if (areLocationsSynonymous(lostItem.lost_location, foundItem.found_location)) {
-      locationScore = 25;
-      reasons.push(`Similar location (${lostItem.lost_location} ↔ ${foundItem.found_location})`);
+    if (catLost === catFound && catLost !== 'other' && catLost !== 'others') {
+      score += 15;
+      matchedSignals.push(`Same category (${lostItem.category})`);
     } else {
-      const locSim = calculateTokenSimilarity(lostItem.lost_location, foundItem.found_location);
-      if (locSim > 0.4) {
-        locationScore = Math.round(locSim * 20);
-        reasons.push('Near reported location');
-      }
-    }
-    score += locationScore;
-    factorBreakdown.location = locationScore;
-
-    // 3. Date Proximity (Weight: 15%)
-    const dateScore = calculateDateScore(lostItem.lost_date, foundItem.found_date);
-    score += dateScore;
-    factorBreakdown.date = dateScore;
-    if (dateScore === 15) {
-      reasons.push('Exact same date reported');
-    } else if (dateScore >= 8) {
-      reasons.push('Dates within close proximity');
+      score += 5;
+      missingSignals.push('Category generic match');
     }
 
-    // 4. Colour Match (Weight: 10%)
-    let colourScore = 0;
-    if (lostItem.colour && foundItem.colour) {
-      if (areColorsMatching(lostItem.colour, foundItem.colour)) {
-        colourScore = 10;
-        reasons.push(`Matching color shade (${lostItem.colour})`);
-      }
+    // Title / Description Semantic Similarity (Weight: 25%)
+    const descLost = (lostItem.item_name || '') + ' ' + (lostItem.description || '');
+    const descFound = (foundItem.item_name || '') + ' ' + (foundItem.description || '');
+    const semSim = embeddingProvider.calculateSimilarity(descLost, descFound);
+    const descScore = Math.round(semSim * 25);
+    score += descScore;
+    if (descScore >= 15) {
+      matchedSignals.push('High semantic description similarity');
+    } else if (descScore >= 8) {
+      matchedSignals.push('Similar description details');
+    } else {
+      missingSignals.push('Low description overlap');
     }
-    score += colourScore;
-    factorBreakdown.colour = colourScore;
 
-    // 5. Brand / Model Match (Weight: 10%)
+    // Location / Building Match (Weight: 15%)
+    let locScore = 0;
+    const bldLost = normalizeText(lostItem.building || lostItem.lost_location);
+    const bldFound = normalizeText(foundItem.building || foundItem.found_location);
+    if (bldLost && bldFound && (bldLost === bldFound || areLocationsSynonymous(bldLost, bldFound))) {
+      locScore = 15;
+      matchedSignals.push(`Same building/location (${lostItem.building || lostItem.lost_location})`);
+    } else {
+      const sim = calculateTokenSimilarity(lostItem.lost_location, foundItem.found_location);
+      locScore = Math.round(sim * 10);
+      if (locScore > 0) matchedSignals.push('Proximity in reported location');
+      else missingSignals.push('Different reported locations');
+    }
+    score += locScore;
+
+    // Brand & Model Match (Weight: 20%)
     let brandScore = 0;
-    const hasBrandOrModel = (lostItem.brand && foundItem.brand) || (lostItem.model && foundItem.model);
-    if (hasBrandOrModel) {
-      let brandMatch = false;
-      let modelMatch = false;
-
-      if (lostItem.brand && foundItem.brand) {
-        brandMatch = calculateTokenSimilarity(lostItem.brand, foundItem.brand) >= 0.7;
-      }
-      if (lostItem.model && foundItem.model) {
-        modelMatch = calculateTokenSimilarity(lostItem.model, foundItem.model) >= 0.6;
-      }
-
-      if (brandMatch && modelMatch) {
-        brandScore = 10;
-        reasons.push(`Exact Brand & Model match (${lostItem.brand} ${lostItem.model})`);
-      } else if (brandMatch) {
-        brandScore = 7;
-        reasons.push(`Matching brand (${lostItem.brand})`);
-      } else if (modelMatch) {
-        brandScore = 5;
-        reasons.push(`Matching model`);
-      }
+    const hasBrand = lostItem.brand && foundItem.brand;
+    const hasModel = lostItem.model && foundItem.model;
+    if (hasBrand && hasModel && normalizeText(lostItem.brand) === normalizeText(foundItem.brand) && normalizeText(lostItem.model) === normalizeText(foundItem.model)) {
+      brandScore = 20;
+      matchedSignals.push(`Exact Brand & Model (${lostItem.brand} ${lostItem.model})`);
+    } else if (hasBrand && normalizeText(lostItem.brand) === normalizeText(foundItem.brand)) {
+      brandScore = 14;
+      matchedSignals.push(`Matching brand (${lostItem.brand})`);
+    } else if (hasModel && normalizeText(lostItem.model) === normalizeText(foundItem.model)) {
+      brandScore = 10;
+      matchedSignals.push(`Matching model (${lostItem.model})`);
     } else {
-      // Check if brand token appears in found item name or description
-      if (lostItem.brand && (normalizeText(foundItem.item_name).includes(normalizeText(lostItem.brand)) ||
-                             normalizeText(foundItem.description).includes(normalizeText(lostItem.brand)))) {
-        brandScore = 6;
-        reasons.push(`Brand mentioned in details (${lostItem.brand})`);
-      }
+      missingSignals.push('Unverified brand/model');
     }
     score += brandScore;
-    factorBreakdown.brand = brandScore;
 
-    // 6. Description & Identifying Details Overlap (Weight: 10%)
-    let detailsScore = 0;
-    const descLost = (lostItem.description || '') + ' ' + (lostItem.identifying_details || '');
-    const descFound = (foundItem.description || '') + ' ' + (foundItem.identifying_details || '');
-    const descSim = calculateTokenSimilarity(descLost, descFound);
-    detailsScore = Math.round(descSim * 10);
-    score += detailsScore;
-    factorBreakdown.details = detailsScore;
-    if (detailsScore >= 5) {
-      reasons.push('Identifying details overlap');
+    // Date & Time Proximity (Weight: 10%)
+    const dateScore = calculateDateScore(lostItem.lost_date, foundItem.found_date);
+    score += dateScore;
+    if (dateScore >= 8) matchedSignals.push('Same or nearby incident date');
+    else missingSignals.push('Dates separated by several days');
+
+    // Color Match (Weight: 5%)
+    let colorScore = 0;
+    if (lostItem.colour && foundItem.colour && areColorsMatching(lostItem.colour, foundItem.colour)) {
+      colorScore = 5;
+      matchedSignals.push(`Matching color (${lostItem.colour})`);
+    } else {
+      missingSignals.push('Color unverified');
     }
+    score += colorScore;
 
-    // Final score capped at 100
-    const finalScore = Math.min(100, score);
+    // Visual Attributes (Weight: 10%)
+    let visualScore = 0;
+    if (lostItem.images && lostItem.images.length > 0 && foundItem.images && foundItem.images.length > 0) {
+      visualScore = 10;
+      matchedSignals.push('Both reports include photographic evidence');
+    }
+    score += visualScore;
+
+    const finalScore = Math.min(100, Math.round(score));
+
+    let confidenceLevel = 'Weak';
+    if (finalScore >= 90) confidenceLevel = 'Very High';
+    else if (finalScore >= 75) confidenceLevel = 'High';
+    else if (finalScore >= 55) confidenceLevel = 'Possible';
+
     return {
       score: finalScore,
-      reasons: reasons.length ? reasons : ['General category resemblance'],
-      factorBreakdown,
+      confidenceLevel,
+      matchedSignals,
+      missingSignals,
+      reasons: matchedSignals,
+      explanation: `Calculated ${confidenceLevel} confidence match (${finalScore}%) based on ${matchedSignals.length} matching signals.`,
+      factorBreakdown: {
+        category: catLost === catFound ? 15 : 5,
+        description: descScore,
+        location: locScore,
+        brandModel: brandScore,
+        dateTime: dateScore,
+        color: colorScore,
+        visual: visualScore
+      }
     };
   }
 
-  // Scenario 2: Owner reports lost item -> scan existing found items
   async checkMatchesForLostItem(lostItemId) {
     const lostItem = await itemRepository.findLostById(lostItemId);
     if (!lostItem) return [];
@@ -251,25 +247,24 @@ class MatchingService {
     const matchesFound = [];
 
     for (const foundItem of candidateFoundItems) {
-      const { score, reasons } = this.calculateMatch(lostItem, foundItem);
+      const matchResult = this.calculateMatch(lostItem, foundItem);
+      const { score, confidenceLevel, matchedSignals, explanation } = matchResult;
 
       if (score >= MATCHING_CONFIG.AUTO_MATCH_THRESHOLD) {
-        const matchId = await matchRepository.upsertMatch(lostItem.id, foundItem.id, score, reasons);
+        const matchId = await matchRepository.upsertMatch(lostItem.id, foundItem.id, score, matchedSignals);
 
-        // Notify lost item owner
         await notificationRepository.create({
           user_id: lostItem.user_id,
-          title: `Match Found: ${score}% match for your "${lostItem.item_name}"`,
-          message: `A found item "${foundItem.item_name}" discovered at "${foundItem.found_location}" matches your report (${reasons.slice(0, 2).join(', ')}).`,
+          title: `Match Alert: ${confidenceLevel} Match (${score}%) for "${lostItem.item_name}"`,
+          message: `${explanation} Found item at "${foundItem.found_location || 'Campus'}".`,
           type: 'match',
           reference_id: matchId,
           reference_type: 'match',
         });
 
-        // Notify finder
         await notificationRepository.create({
           user_id: foundItem.user_id,
-          title: `Potential Owner Detected: ${score}% match`,
+          title: `Potential Owner Identified: ${score}% match`,
           message: `Your found item "${foundItem.item_name}" matches a reported lost item "${lostItem.item_name}".`,
           type: 'match',
           reference_id: matchId,
@@ -281,17 +276,10 @@ class MatchingService {
         matchesFound.push({
           matchId,
           score,
-          reasons,
-          foundItem: {
-            id: foundItem.id,
-            item_name: foundItem.item_name,
-            category: foundItem.category,
-            found_location: foundItem.found_location,
-            found_date: foundItem.found_date,
-            colour: foundItem.colour,
-            brand: foundItem.brand,
-            image: foundItem.images && foundItem.images.length ? foundItem.images[0] : null,
-          },
+          confidenceLevel,
+          matchedSignals,
+          explanation,
+          foundItem,
         });
       }
     }
@@ -300,7 +288,6 @@ class MatchingService {
     return matchesFound;
   }
 
-  // Scenario 1: Finder uploads found item -> scan existing lost reports
   async checkMatchesForFoundItem(foundItemId) {
     const foundItem = await itemRepository.findFoundById(foundItemId);
     if (!foundItem) return [];
@@ -311,15 +298,16 @@ class MatchingService {
     const matchesFound = [];
 
     for (const lostItem of candidateLostItems) {
-      const { score, reasons } = this.calculateMatch(lostItem, foundItem);
+      const matchResult = this.calculateMatch(lostItem, foundItem);
+      const { score, confidenceLevel, matchedSignals, explanation } = matchResult;
 
       if (score >= MATCHING_CONFIG.AUTO_MATCH_THRESHOLD) {
-        const matchId = await matchRepository.upsertMatch(lostItem.id, foundItem.id, score, reasons);
+        const matchId = await matchRepository.upsertMatch(lostItem.id, foundItem.id, score, matchedSignals);
 
         await notificationRepository.create({
           user_id: lostItem.user_id,
-          title: `New Match Alert: ${score}% match for your "${lostItem.item_name}"`,
-          message: `Someone just found an item "${foundItem.item_name}" at "${foundItem.found_location}" that matches your lost item report.`,
+          title: `New Match Discovered: ${confidenceLevel} Match (${score}%)`,
+          message: `A found item matching "${lostItem.item_name}" was reported at "${foundItem.found_location || 'Campus'}".`,
           type: 'match',
           reference_id: matchId,
           reference_type: 'match',
@@ -327,7 +315,7 @@ class MatchingService {
 
         await notificationRepository.create({
           user_id: foundItem.user_id,
-          title: `Match Detected: ${score}% match`,
+          title: `Potential Owner Detected: ${score}% match`,
           message: `Your found item "${foundItem.item_name}" matches a lost report for "${lostItem.item_name}".`,
           type: 'match',
           reference_id: matchId,
@@ -339,17 +327,10 @@ class MatchingService {
         matchesFound.push({
           matchId,
           score,
-          reasons,
-          lostItem: {
-            id: lostItem.id,
-            item_name: lostItem.item_name,
-            category: lostItem.category,
-            lost_location: lostItem.lost_location,
-            lost_date: lostItem.lost_date,
-            colour: lostItem.colour,
-            brand: lostItem.brand,
-            image: lostItem.images && lostItem.images.length ? lostItem.images[0] : null,
-          },
+          confidenceLevel,
+          matchedSignals,
+          explanation,
+          lostItem,
         });
       }
     }

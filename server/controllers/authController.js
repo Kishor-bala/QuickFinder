@@ -2,7 +2,9 @@ const authService = require('../services/authService');
 
 exports.register = async (req, res, next) => {
   try {
-    const profilePhoto = req.file ? `/uploads/profiles/${req.file.filename}` : null;
+    const profilePhoto = req.file
+      ? `data:${req.file.mimetype || 'image/jpeg'};base64,${req.file.buffer.toString('base64')}`
+      : null;
     const { user, token, emailVerificationLink } = await authService.register(req.body, profilePhoto);
     res.status(201).json({
       message: 'Registration successful! Welcome to Quick Finder.',
@@ -40,7 +42,9 @@ exports.getMe = async (req, res, next) => {
 
 exports.updateProfile = async (req, res, next) => {
   try {
-    const profilePhoto = req.file ? `/uploads/profiles/${req.file.filename}` : null;
+    const profilePhoto = req.file
+      ? `data:${req.file.mimetype || 'image/jpeg'};base64,${req.file.buffer.toString('base64')}`
+      : null;
     const user = await authService.updateProfile(req.user.id, req.body, profilePhoto);
     res.status(200).json({
       message: 'Profile updated successfully.',
