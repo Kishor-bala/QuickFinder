@@ -33,7 +33,7 @@ export default function LandingPage() {
           </div>
 
           {/* Official PSG Crest Logo Image (Extra-Large Hero Display) */}
-          <div className="animate-fade-in-down animation-delay-100 py-1">
+          <div className="animate-fade-in-down animation-delay-100 -mb-4 sm:-mb-8 lg:-mb-12">
             <img
               src="/psg-logo.svg"
               alt="PSG College Crest"
@@ -41,8 +41,8 @@ export default function LandingPage() {
             />
           </div>
 
-          {/* QuickFinder Logo Image (Extra Large with Aggressively Tight Vertical Margins) */}
-          <div className="animate-fade-in-up -my-6 sm:-my-12 lg:-my-16 flex flex-col items-center">
+          {/* QuickFinder Logo Image (Positioned tightly under PSG Crest) */}
+          <div className="animate-fade-in-up -my-8 sm:-my-16 lg:-my-20 flex flex-col items-center">
             <img
               src="/quickfinder-logo.png"
               alt="QUICK FINDER"

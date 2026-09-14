@@ -35,11 +35,11 @@ export default function Navbar() {
   return (
     <header className="sticky top-0 z-50 bg-psg-navy backdrop-blur border-b border-white/10 shadow-xl transition-all">
       <div className="w-full px-3 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between min-h-[84px] sm:min-h-[100px] py-2 sm:py-3 gap-4">
+        <div className="flex items-center justify-between min-h-[56px] sm:min-h-[64px] py-1.5 sm:py-2 gap-4">
           
           {/* Brand Logo & Crest (Flush to Left End) */}
           <Link to={isAuthenticated ? "/dashboard" : "/"} className="flex items-center group flex-shrink-0">
-            <PsgLogo variant="dark" size="lg" showTagline={true} />
+            <PsgLogo variant="dark" size="md" showTagline={true} />
           </Link>
 
           {/* Desktop Navigation Links */}
