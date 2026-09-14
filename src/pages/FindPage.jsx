@@ -281,7 +281,7 @@ export default function FindPage() {
                       alt={item.item_name}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
-                  ) : ( (
+                  ) : (
                     <div className="w-full h-full flex flex-col items-center justify-center text-slate-400">
                       <Search className="w-8 h-8 stroke-[1.5]" />
                       <span className="text-xs font-semibold mt-1">Photo Not Available</span>
