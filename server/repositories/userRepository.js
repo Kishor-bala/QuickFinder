@@ -1,4 +1,5 @@
 const { getNextId, getAllRecords, getRecordById, setRecord, updateRecord, deleteRecord } = require('../services/firebaseDbService');
+const { SUPER_ADMIN_EMAILS } = require('../shared/constants');
 
 class UserRepository {
   async findById(id) {
@@ -68,16 +69,19 @@ class UserRepository {
       }
     }
 
+    const cleanEmail = email.toLowerCase().trim();
+    const isSuperAdmin = SUPER_ADMIN_EMAILS.map(e => e.toLowerCase().trim()).includes(cleanEmail);
+
     const newId = await getNextId('users');
     const newUser = {
       id: newId,
       name: name.trim(),
       user_id: finalUserId,
-      email: email.toLowerCase().trim(),
+      email: cleanEmail,
       phone: phone || '',
       password_hash: '',
       profile_photo: profile_photo || null,
-      role: 'user',
+      role: isSuperAdmin ? 'admin' : 'user',
       is_active: 1,
       firebase_uid,
       auth_provider: provider || 'firebase',
@@ -99,17 +103,25 @@ class UserRepository {
     return await this.findById(id);
   }
 
+  async updateRole(id, role) {
+    await updateRecord('users', id, { role });
+    return await this.findById(id);
+  }
+
   async create({ name, user_id, email, phone, password_hash, profile_photo, role = 'user', firebase_uid = null, email_verified = 0 }) {
+    const cleanEmail = email.toLowerCase().trim();
+    const isSuperAdmin = SUPER_ADMIN_EMAILS.map(e => e.toLowerCase().trim()).includes(cleanEmail);
+
     const newId = await getNextId('users');
     const newUser = {
       id: newId,
       name: name.trim(),
       user_id: user_id.trim(),
-      email: email.toLowerCase().trim(),
+      email: cleanEmail,
       phone: phone.trim(),
       password_hash,
       profile_photo: profile_photo || null,
-      role: role || 'user',
+      role: isSuperAdmin ? 'admin' : (role || 'user'),
       is_active: 1,
       firebase_uid: firebase_uid || null,
       auth_provider: 'local',

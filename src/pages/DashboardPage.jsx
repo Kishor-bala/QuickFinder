@@ -50,16 +50,16 @@ export default function DashboardPage() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10">
       
       {/* PSG Institutional Welcome Banner */}
-      <div className="bg-psg-navy rounded-3xl p-6 sm:p-10 text-white shadow-2xl border border-blue-900/60 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative overflow-hidden">
+      <div className="bg-psg-navy rounded-3xl p-6 sm:p-10 text-white shadow-2xl border border-white/20 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative overflow-hidden">
         
         {/* Banner Content */}
         <div className="space-y-2 z-10 max-w-xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-psg-gold/30 text-psg-gold text-xs font-extrabold tracking-wide uppercase">
-            <Sparkles className="w-3.5 h-3.5" />
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-white text-xs font-extrabold tracking-wide uppercase">
+            <Sparkles className="w-3.5 h-3.5 text-white" />
             PSG CAS CAMPUS DASHBOARD
           </div>
           <h1 className="text-2xl sm:text-4xl font-black tracking-tight font-['Outfit']">
-            Welcome, <span className="text-psg-gold">{user?.name}</span>!
+            Welcome, <span className="text-white">{user?.name}</span>!
           </h1>
           <p className="text-slate-300 text-xs sm:text-sm leading-relaxed font-medium">
             Roll / ID: <strong>{user?.user_id}</strong> • Access your lost item reports, upload found belongings, and track claim notifications.
@@ -73,7 +73,7 @@ export default function DashboardPage() {
             <span className="text-[10px] sm:text-xs text-slate-300 font-extrabold uppercase tracking-wider">Lost Reports</span>
           </div>
           <div className="bg-white/10 backdrop-blur rounded-2xl p-4 border border-white/10 text-center min-w-[105px] shadow-sm">
-            <span className="block text-2xl sm:text-3xl font-black text-psg-gold font-['Outfit']">{userStats.foundCount}</span>
+            <span className="block text-2xl sm:text-3xl font-black text-white font-['Outfit']">{userStats.foundCount}</span>
             <span className="text-[10px] sm:text-xs text-slate-300 font-extrabold uppercase tracking-wider">Found Uploads</span>
           </div>
           <div className="bg-white/10 backdrop-blur rounded-2xl p-4 border border-white/10 text-center min-w-[105px] shadow-sm">
@@ -83,7 +83,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Decorative Glow */}
-        <div className="absolute right-0 top-0 translate-x-12 -translate-y-12 w-96 h-96 rounded-full bg-psg-gold/10 blur-3xl pointer-events-none"></div>
+        <div className="absolute right-0 top-0 translate-x-12 -translate-y-12 w-96 h-96 rounded-full bg-white/5 blur-3xl pointer-events-none"></div>
       </div>
 
       {/* Action Header */}
@@ -98,17 +98,17 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
         
         {/* CARD 1: 🔍 SEARCH & REPORT LOST */}
-        <div className="group relative bg-white rounded-3xl p-8 sm:p-10 border border-slate-200 shadow-xl hover:shadow-2xl hover:border-psg-blue transition-all duration-300 flex flex-col justify-between overflow-hidden">
+        <div className="group relative bg-white rounded-3xl p-8 sm:p-10 border border-slate-200 shadow-xl hover:shadow-2xl hover:border-psg-navy transition-all duration-300 flex flex-col justify-between overflow-hidden">
           <div className="space-y-6">
-            <div className="w-16 h-16 rounded-2xl bg-psg-navy text-psg-gold flex items-center justify-center group-hover:scale-105 transition-all duration-300 shadow-md">
+            <div className="w-16 h-16 rounded-2xl bg-psg-navy text-white flex items-center justify-center group-hover:scale-105 transition-all duration-300 shadow-md">
               <Search className="w-8 h-8 stroke-[2.5]" />
             </div>
             
             <div className="space-y-2">
-              <div className="inline-block px-3 py-1 rounded-full bg-blue-50 text-psg-blue text-xs font-extrabold uppercase tracking-wider">
+              <div className="inline-block px-3 py-1 rounded-full bg-slate-100 text-psg-navy text-xs font-extrabold uppercase tracking-wider">
                 Module 1
               </div>
-              <h3 className="text-3xl font-black text-psg-navy tracking-tight font-['Outfit'] group-hover:text-psg-blue transition-colors">
+              <h3 className="text-3xl font-black text-psg-navy tracking-tight font-['Outfit'] group-hover:text-psg-royal transition-colors">
                 FIND LOST BELONGINGS
               </h3>
               <p className="text-slate-600 text-sm sm:text-base font-semibold">
@@ -123,10 +123,10 @@ export default function DashboardPage() {
           <div className="pt-8 space-y-3">
             <Link
               to="/find"
-              className="w-full py-4 px-6 rounded-2xl bg-psg-blue hover:bg-psg-royal text-white font-extrabold text-sm shadow-lg flex items-center justify-center gap-2 group-hover:gap-3 transition-all"
+              className="w-full py-4 px-6 rounded-2xl bg-psg-navy hover:bg-psg-royal text-white font-extrabold text-sm shadow-lg flex items-center justify-center gap-2 group-hover:gap-3 transition-all"
             >
               <span>BROWSE FOUND DIRECTORY</span>
-              <ArrowRight className="w-4 h-4 text-psg-gold" />
+              <ArrowRight className="w-4 h-4 text-white" />
             </Link>
 
             <Link
@@ -140,17 +140,17 @@ export default function DashboardPage() {
         </div>
 
         {/* CARD 2: 📤 UPLOAD FOUND ITEM */}
-        <div className="group relative bg-white rounded-3xl p-8 sm:p-10 border border-slate-200 shadow-xl hover:shadow-2xl hover:border-psg-gold transition-all duration-300 flex flex-col justify-between overflow-hidden">
+        <div className="group relative bg-white rounded-3xl p-8 sm:p-10 border border-slate-200 shadow-xl hover:shadow-2xl hover:border-psg-navy transition-all duration-300 flex flex-col justify-between overflow-hidden">
           <div className="space-y-6">
-            <div className="w-16 h-16 rounded-2xl bg-psg-gold text-psg-navy flex items-center justify-center group-hover:scale-105 transition-all duration-300 shadow-md">
+            <div className="w-16 h-16 rounded-2xl bg-psg-navy text-white flex items-center justify-center group-hover:scale-105 transition-all duration-300 shadow-md">
               <Upload className="w-8 h-8 stroke-[2.5]" />
             </div>
 
             <div className="space-y-2">
-              <div className="inline-block px-3 py-1 rounded-full bg-amber-50 text-psg-amber text-xs font-extrabold uppercase tracking-wider">
+              <div className="inline-block px-3 py-1 rounded-full bg-slate-100 text-psg-navy text-xs font-extrabold uppercase tracking-wider">
                 Module 2
               </div>
-              <h3 className="text-3xl font-black text-psg-navy tracking-tight font-['Outfit'] group-hover:text-psg-amber transition-colors">
+              <h3 className="text-3xl font-black text-psg-navy tracking-tight font-['Outfit'] group-hover:text-psg-royal transition-colors">
                 UPLOAD FOUND ITEM
               </h3>
               <p className="text-slate-600 text-sm sm:text-base font-semibold">
@@ -165,10 +165,10 @@ export default function DashboardPage() {
           <div className="pt-8 space-y-3">
             <Link
               to="/upload"
-              className="w-full py-4 px-6 rounded-2xl bg-psg-navy hover:bg-slate-900 text-white font-extrabold text-sm shadow-lg border-2 border-psg-gold flex items-center justify-center gap-2 group-hover:gap-3 transition-all"
+              className="w-full py-4 px-6 rounded-2xl bg-psg-navy hover:bg-psg-royal text-white font-extrabold text-sm shadow-lg border border-white/20 flex items-center justify-center gap-2 group-hover:gap-3 transition-all"
             >
               <span>UPLOAD FOUND ITEM</span>
-              <ArrowRight className="w-4 h-4 text-psg-gold" />
+              <ArrowRight className="w-4 h-4 text-white" />
             </Link>
 
             <Link
@@ -184,17 +184,17 @@ export default function DashboardPage() {
 
       {/* Active High Matches Alert Section */}
       {matches.length > 0 && (
-        <div className="max-w-5xl mx-auto bg-blue-50/80 border border-psg-blue/30 rounded-3xl p-6 sm:p-8 space-y-4 shadow-sm">
+        <div className="max-w-5xl mx-auto bg-psg-navy border border-psg-royal/40 rounded-3xl p-6 sm:p-8 space-y-4 shadow-xl text-white">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-psg-navy text-psg-gold flex items-center justify-center shadow">
-                <Sparkles className="w-5 h-5 text-psg-gold" />
+              <div className="w-10 h-10 rounded-xl bg-white/10 text-white flex items-center justify-center shadow">
+                <Sparkles className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h3 className="text-lg font-black text-psg-navy font-['Outfit']">
+                <h3 className="text-lg font-black text-white font-['Outfit']">
                   Potential Campus Matches Found!
                 </h3>
-                <p className="text-xs text-slate-600 font-medium">
+                <p className="text-xs text-slate-300 font-medium">
                   Quick Finder identified potential matches for your reported lost items.
                 </p>
               </div>

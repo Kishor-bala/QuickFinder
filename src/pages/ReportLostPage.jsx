@@ -56,15 +56,17 @@ export default function ReportLostPage() {
       const ext = res.data.extracted || {};
       setFormData(prev => ({
         ...prev,
+        item_name: ext.item_name || prev.item_name,
         category: ext.category || prev.category,
-        colour: ext.color || prev.colour,
         brand: ext.brand || prev.brand,
-        lost_location: ext.location || prev.lost_location,
+        model: ext.model || prev.model,
+        colour: ext.colour || ext.color || prev.colour,
+        lost_location: ext.lost_location || ext.location || prev.lost_location,
         building: ext.building || prev.building,
-        description: aiText
+        description: ext.description || aiText
       }));
-    } catch {
-      // Fallback local extraction
+    } catch (err) {
+      console.error('AI extraction error:', err);
       setFormData(prev => ({ ...prev, description: aiText }));
     } finally {
       setAiLoading(false);
@@ -121,7 +123,7 @@ export default function ReportLostPage() {
       </button>
 
       {/* Header */}
-      <div className="bg-gradient-to-r from-psg-navy to-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
+      <div className="bg-psg-navy text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden border border-white/10">
         <div className="relative z-10 space-y-2">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-amber-300 text-xs font-bold backdrop-blur-md">
             <Sparkles className="w-4 h-4" /> Campus Lost Report System

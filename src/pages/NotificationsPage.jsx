@@ -32,15 +32,15 @@ export default function NotificationsPage() {
   const getNotifIcon = (type) => {
     switch (type) {
       case 'match':
-        return <div className="w-10 h-10 rounded-2xl bg-psg-navy text-psg-gold flex items-center justify-center flex-shrink-0 shadow"><Sparkles className="w-5 h-5" /></div>;
+        return <div className="w-10 h-10 rounded-2xl bg-psg-navy text-white flex items-center justify-center flex-shrink-0 shadow"><Sparkles className="w-5 h-5" /></div>;
       case 'claim':
-        return <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center flex-shrink-0 shadow-sm"><ShieldAlert className="w-5 h-5" /></div>;
+        return <div className="w-10 h-10 rounded-2xl bg-slate-900 text-white flex items-center justify-center flex-shrink-0 shadow-sm"><ShieldAlert className="w-5 h-5" /></div>;
       case 'claim_accepted':
         return <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0 shadow-sm"><CheckCircle className="w-5 h-5" /></div>;
       case 'claim_rejected':
         return <div className="w-10 h-10 rounded-2xl bg-rose-100 text-rose-700 flex items-center justify-center flex-shrink-0 shadow-sm"><XCircle className="w-5 h-5" /></div>;
       default:
-        return <div className="w-10 h-10 rounded-2xl bg-blue-100 text-psg-blue flex items-center justify-center flex-shrink-0 shadow-sm"><Info className="w-5 h-5" /></div>;
+        return <div className="w-10 h-10 rounded-2xl bg-slate-100 text-psg-navy flex items-center justify-center flex-shrink-0 shadow-sm"><Info className="w-5 h-5" /></div>;
     }
   };
 
@@ -50,11 +50,11 @@ export default function NotificationsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <span className="text-[10px] font-extrabold uppercase tracking-widest text-psg-blue">
+          <span className="text-[10px] font-extrabold uppercase tracking-widest text-psg-navy">
             PSG TECH • NOTIFICATION CENTER
           </span>
           <h1 className="text-2xl sm:text-3xl font-black text-psg-navy tracking-tight font-['Outfit'] flex items-center gap-2.5">
-            <Bell className="w-7 h-7 text-psg-gold" />
+            <Bell className="w-7 h-7 text-psg-navy" />
             <span>Campus Alerts</span>
             {unreadCount > 0 && (
               <span className="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-rose-500 text-white shadow">
@@ -70,9 +70,9 @@ export default function NotificationsPage() {
         {unreadCount > 0 && (
           <button
             onClick={markAllAsRead}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-psg-navy text-white hover:bg-slate-900 text-xs font-extrabold transition shadow"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-psg-navy text-white hover:bg-psg-royal text-xs font-extrabold transition shadow"
           >
-            <CheckCheck className="w-4 h-4 text-psg-gold" />
+            <CheckCheck className="w-4 h-4 text-white" />
             <span>Mark all read</span>
           </button>
         )}
@@ -101,7 +101,7 @@ export default function NotificationsPage() {
       {/* Notification List */}
       {filtered.length === 0 ? (
         <div className="bg-white rounded-3xl p-12 text-center border border-slate-200 shadow-md max-w-md mx-auto space-y-3">
-          <div className="w-12 h-12 rounded-2xl bg-psg-navy text-psg-gold flex items-center justify-center mx-auto shadow">
+          <div className="w-12 h-12 rounded-2xl bg-psg-navy text-white flex items-center justify-center mx-auto shadow">
             <Bell className="w-6 h-6" />
           </div>
           <h3 className="font-black text-psg-navy text-base font-['Outfit']">No notifications</h3>

@@ -7,6 +7,8 @@ const { authRateLimiter } = require('../middleware/rateLimiter');
 
 router.post('/register', authRateLimiter, upload.single('profile_photo'), authController.register);
 router.post('/login', authRateLimiter, authController.login);
+router.post('/send-email-otp', authRateLimiter, authController.sendEmailOtp);
+router.post('/verify-email-otp', authRateLimiter, authController.verifyEmailOtp);
 router.post('/send-otp', authRateLimiter, authController.sendOtp);
 router.post('/verify-otp', authRateLimiter, authController.verifyOtp);
 router.post('/verify-msg91', authRateLimiter, authController.verifyMsg91Token);

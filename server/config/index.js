@@ -21,6 +21,14 @@ const config = {
   uploadDir: process.env.UPLOAD_DIR || (isVercel ? '/tmp/uploads' : path.join(__dirname, '..', '..', 'uploads')),
   firebaseServiceAccountPath: process.env.FIREBASE_SERVICE_ACCOUNT_PATH || path.join(__dirname, 'firebase-service-account.json'),
   twoFactorApiKey: process.env.TWO_FACTOR_API_KEY || '',
+  smtp: {
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: parseInt(process.env.SMTP_PORT, 10) || 465,
+    secure: process.env.SMTP_SECURE !== 'false',
+    user: process.env.SMTP_USER || 'mathanpsgcas@gmail.com',
+    pass: process.env.SMTP_PASS || 'yksefncpsuuswxrh',
+    from: process.env.SMTP_FROM || '"QuickFinder" <mathanpsgcas@gmail.com>',
+  },
   rateLimit: {
     windowMs: 15 * 60 * 1000, // 15 minutes
     maxRequests: parseInt(process.env.RATE_LIMIT_MAX, 10) || 300,

@@ -81,13 +81,13 @@ export default function FindPage() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       
       {/* PSG Institutional Search Header */}
-      <div className="bg-psg-navy rounded-3xl p-6 sm:p-10 text-white shadow-2xl border border-blue-900/60 space-y-6">
+      <div className="bg-psg-navy rounded-3xl p-6 sm:p-10 text-white shadow-2xl border border-white/10 space-y-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1">
-            <span className="text-[10px] font-extrabold uppercase tracking-widest text-psg-gold">
+            <span className="text-[10px] font-extrabold uppercase tracking-widest text-white/80">
               PSG TECH • CAMPUS DIRECTORY
             </span>
-            <h1 className="text-2xl sm:text-4xl font-black tracking-tight font-['Outfit']">
+            <h1 className="text-2xl sm:text-4xl font-black tracking-tight font-['Outfit'] text-white">
               Search Found Belongings
             </h1>
             <p className="text-slate-300 text-xs sm:text-sm font-medium">
@@ -97,7 +97,7 @@ export default function FindPage() {
 
           <Link
             to="/report-lost"
-            className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-psg-gold hover:bg-amber-400 text-psg-navy font-extrabold text-xs shadow-lg transition-all self-start md:self-auto"
+            className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-white hover:bg-slate-100 text-psg-navy font-extrabold text-xs shadow-lg transition-all self-start md:self-auto"
           >
             <PlusCircle className="w-4 h-4 text-psg-navy" />
             <span>REPORT LOST ITEM</span>
@@ -107,18 +107,18 @@ export default function FindPage() {
         {/* Search Input Bar */}
         <form onSubmit={handleSearchSubmit} className="relative flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
-            <Search className="w-5 h-5 text-psg-blue absolute left-4 top-1/2 -translate-y-1/2" />
+            <Search className="w-5 h-5 text-psg-navy absolute left-4 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by item name, brand, location, colour, roll number..."
-              className="w-full pl-12 pr-4 py-3.5 rounded-2xl bg-white text-psg-navy placeholder-slate-400 text-sm font-semibold focus:ring-4 focus:ring-psg-blue/30 outline-none transition"
+              className="w-full pl-12 pr-4 py-3.5 rounded-2xl bg-white text-psg-navy placeholder-slate-400 text-sm font-semibold focus:ring-4 focus:ring-white/30 outline-none transition"
             />
           </div>
           <button
             type="submit"
-            className="py-3.5 px-8 rounded-2xl bg-psg-blue hover:bg-psg-royal text-white font-extrabold text-sm tracking-wide shadow-md transition-all flex items-center justify-center gap-2"
+            className="py-3.5 px-8 rounded-2xl bg-white hover:bg-slate-100 text-psg-navy font-extrabold text-sm tracking-wide shadow-md transition-all flex items-center justify-center gap-2"
           >
             <Search className="w-4 h-4 stroke-[2.5]" />
             <span>SEARCH</span>
@@ -126,15 +126,15 @@ export default function FindPage() {
         </form>
 
         {/* Category Chips Filter Carousel */}
-        <div className="space-y-2.5 pt-3 border-t border-blue-900/60">
+        <div className="space-y-2.5 pt-3 border-t border-white/20">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-extrabold uppercase tracking-wider text-psg-gold">
+            <span className="text-xs font-extrabold uppercase tracking-wider text-white">
               Filter Category:
             </span>
             {(search || category !== 'All' || location || date || colour !== 'All') && (
               <button
                 onClick={handleResetFilters}
-                className="text-xs text-psg-gold hover:underline font-bold"
+                className="text-xs text-white hover:underline font-bold"
               >
                 Clear all filters
               </button>
@@ -147,7 +147,7 @@ export default function FindPage() {
                 onClick={() => setCategory(cat)}
                 className={`px-4 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
                   category === cat
-                    ? 'bg-psg-gold text-psg-navy shadow-md font-extrabold'
+                    ? 'bg-white text-psg-navy shadow-md font-extrabold'
                     : 'bg-white/10 hover:bg-white/20 text-slate-200 border border-white/15'
                 }`}
               >
@@ -203,7 +203,7 @@ export default function FindPage() {
 
           <button
             onClick={fetchItems}
-            className="px-4 py-2 rounded-xl bg-psg-navy text-white hover:bg-slate-900 font-bold text-xs transition"
+            className="px-4 py-2 rounded-xl bg-psg-navy text-white hover:bg-psg-royal font-bold text-xs transition"
           >
             Apply Filters
           </button>
@@ -245,7 +245,7 @@ export default function FindPage() {
       ) : items.length === 0 ? (
         /* Empty State */
         <div className="bg-white rounded-3xl p-12 text-center border border-slate-200 shadow-md max-w-lg mx-auto space-y-4">
-          <div className="w-14 h-14 rounded-2xl bg-psg-navy text-psg-gold flex items-center justify-center mx-auto shadow">
+          <div className="w-14 h-14 rounded-2xl bg-psg-navy text-white flex items-center justify-center mx-auto shadow">
             <Search className="w-7 h-7" />
           </div>
           <div className="space-y-1">
@@ -256,9 +256,9 @@ export default function FindPage() {
           </div>
           <Link
             to="/report-lost"
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-psg-blue hover:bg-psg-royal text-white font-extrabold text-xs shadow-md transition-all"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-psg-navy hover:bg-psg-royal text-white font-extrabold text-xs shadow-md transition-all"
           >
-            <PlusCircle className="w-4 h-4 text-psg-gold" />
+            <PlusCircle className="w-4 h-4 text-white" />
             <span>REPORT THIS LOST ITEM</span>
           </Link>
         </div>
@@ -290,7 +290,7 @@ export default function FindPage() {
 
                   {/* Category badge */}
                   <div className="absolute top-3 left-3">
-                    <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-psg-navy/90 text-psg-gold shadow-sm">
+                    <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-psg-navy/90 text-white shadow-sm">
                       {item.category}
                     </span>
                   </div>
@@ -301,7 +301,7 @@ export default function FindPage() {
                       <span className={`px-2.5 py-1 rounded-full text-xs font-black tracking-wide shadow-md flex items-center gap-1 ${
                         item.matchScore >= 80
                           ? 'bg-emerald-600 text-white animate-pulse'
-                          : 'bg-psg-gold text-psg-navy'
+                          : 'bg-psg-navy text-white border border-white/20'
                       }`}>
                         <Sparkles className="w-3.5 h-3.5" />
                         Match: {item.matchScore}%
@@ -350,7 +350,7 @@ export default function FindPage() {
 
                     <Link
                       to={`/items/${item.id}`}
-                      className="px-4 py-2 rounded-xl bg-psg-navy hover:bg-slate-900 text-white text-xs font-bold shadow-sm transition-all"
+                      className="px-4 py-2 rounded-xl bg-psg-navy hover:bg-psg-royal text-white text-xs font-bold shadow-sm transition-all"
                     >
                       VIEW DETAILS
                     </Link>

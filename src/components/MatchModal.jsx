@@ -33,7 +33,7 @@ export default function MatchModal({ match, onClose, onDismiss }) {
       <div className="bg-white rounded-3xl shadow-2xl border border-brand-100 max-w-md w-full overflow-hidden transform transition-all">
         
         {/* Top Celebration Header */}
-        <div className="bg-gradient-to-br from-brand-600 to-teal-500 text-white p-6 text-center relative overflow-hidden">
+        <div className="bg-psg-navy text-white p-6 text-center relative overflow-hidden border-b border-white/10">
           <div className="absolute top-2 right-2">
             <button
               onClick={onClose}
@@ -43,10 +43,10 @@ export default function MatchModal({ match, onClose, onDismiss }) {
             </button>
           </div>
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md mb-3 ring-4 ring-white/30 shadow-lg">
-            <Sparkles className="w-7 h-7 text-amber-300 animate-bounce" />
+            <Sparkles className="w-7 h-7 text-white animate-bounce" />
           </div>
           <h3 className="text-xl font-black tracking-tight">🎉 Possible Match Found!</h3>
-          <p className="text-brand-100 text-xs mt-1">
+          <p className="text-slate-300 text-xs mt-1">
             We found an item that may belong to you.
           </p>
         </div>

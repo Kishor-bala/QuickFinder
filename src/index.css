@@ -9,7 +9,7 @@
   }
 
   body {
-    @apply bg-slate-50 text-slate-900 antialiased font-sans min-h-screen selection:bg-amber-400 selection:text-slate-900;
+    @apply bg-slate-50 text-slate-900 antialiased font-sans min-h-screen selection:bg-psg-navy selection:text-white;
   }
 
   /* Prevent content clipping and horizontal overflow */
@@ -30,40 +30,57 @@
   }
 
   input:focus, select:focus, textarea:focus {
-    @apply outline-none ring-2 ring-psg-blue/30 border-psg-blue;
+    @apply outline-none ring-2 ring-psg-navy/30 border-psg-navy;
   }
 }
 
 @layer utilities {
+  /* Solid Unified PSG Blue Utilities */
+  .bg-psg-gradient {
+    background: #2E2A88;
+  }
+
+  .bg-psg-gradient-hover {
+    background: #201D60;
+  }
+
+  .text-psg-gradient {
+    color: #2E2A88;
+  }
+
   /* Glassmorphism Styles */
   .glass-navy {
-    background: rgba(11, 25, 44, 0.92);
+    background: rgba(46, 42, 136, 0.96);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.18);
   }
 
   .glass-card {
     background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(226, 232, 240, 0.8);
+    border: 1px solid rgba(221, 217, 245, 0.6);
   }
 
   .glass-dark-card {
-    background: rgba(15, 23, 42, 0.85);
+    background: rgba(32, 29, 96, 0.95);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
   }
 
-  /* PSG Crest Glow */
-  .gold-glow {
-    box-shadow: 0 0 25px rgba(245, 158, 11, 0.35);
+  /* PSG Crest Glows */
+  .white-glow {
+    box-shadow: 0 0 25px rgba(255, 255, 255, 0.25);
   }
 
   .navy-glow {
-    box-shadow: 0 0 30px rgba(11, 25, 44, 0.25);
+    box-shadow: 0 0 30px rgba(46, 42, 136, 0.4);
+  }
+
+  .royal-glow {
+    box-shadow: 0 0 30px rgba(46, 42, 136, 0.4);
   }
 
   .table-container {

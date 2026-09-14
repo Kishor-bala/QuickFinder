@@ -33,24 +33,24 @@ export default function Navbar() {
   const isActive = (path) => location.pathname === path;
 
   return (
-    <header className="sticky top-0 z-50 bg-psg-navy/95 backdrop-blur border-b border-blue-900/60 shadow-lg shadow-psg-navy/20 transition-all">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-14 sm:h-16">
+    <header className="sticky top-0 z-50 bg-psg-navy backdrop-blur border-b border-white/10 shadow-xl transition-all">
+      <div className="w-full px-3 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between min-h-[84px] sm:min-h-[100px] py-2 sm:py-3 gap-4">
           
-          {/* Brand Logo & Tagline */}
-          <Link to={isAuthenticated ? "/dashboard" : "/"} className="flex items-center group">
-            <PsgLogo variant="dark" size="md" showTagline={true} />
+          {/* Brand Logo & Crest (Flush to Left End) */}
+          <Link to={isAuthenticated ? "/dashboard" : "/"} className="flex items-center group flex-shrink-0">
+            <PsgLogo variant="dark" size="lg" showTagline={true} />
           </Link>
 
           {/* Desktop Navigation Links */}
           {isAuthenticated ? (
-            <nav className="hidden md:flex items-center space-x-1 lg:space-x-2">
+            <nav className="hidden md:flex items-center gap-1 lg:gap-2">
               <Link
                 to="/dashboard"
-                className={`px-3.5 py-2 rounded-xl text-xs lg:text-sm font-bold transition-all ${
+                className={`px-3 py-2 rounded-xl text-xs lg:text-sm font-bold transition-all whitespace-nowrap ${
                   isActive('/dashboard')
-                    ? 'text-psg-gold bg-white/10 shadow-inner'
-                    : 'text-slate-200 hover:text-white hover:bg-white/5'
+                    ? 'text-white bg-white/15 shadow-inner'
+                    : 'text-slate-200 hover:text-white hover:bg-white/10'
                 }`}
               >
                 Home
@@ -58,59 +58,59 @@ export default function Navbar() {
 
               <Link
                 to="/find"
-                className={`px-3.5 py-2 rounded-xl text-xs lg:text-sm font-bold transition-all flex items-center gap-1.5 ${
+                className={`px-3 py-2 rounded-xl text-xs lg:text-sm font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${
                   isActive('/find')
-                    ? 'text-psg-gold bg-white/10 shadow-inner'
-                    : 'text-slate-200 hover:text-white hover:bg-white/5'
+                    ? 'text-white bg-white/15 shadow-inner'
+                    : 'text-slate-200 hover:text-white hover:bg-white/10'
                 }`}
               >
-                <Search className="w-4 h-4 text-psg-gold" />
+                <Search className="w-4 h-4 text-white" />
                 Find Items
               </Link>
 
               <Link
                 to="/upload"
-                className={`px-3.5 py-2 rounded-xl text-xs lg:text-sm font-bold transition-all flex items-center gap-1.5 ${
+                className={`px-3 py-2 rounded-xl text-xs lg:text-sm font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${
                   isActive('/upload')
-                    ? 'text-psg-gold bg-white/10 shadow-inner'
-                    : 'text-slate-200 hover:text-white hover:bg-white/5'
+                    ? 'text-white bg-white/15 shadow-inner'
+                    : 'text-slate-200 hover:text-white hover:bg-white/10'
                 }`}
               >
-                <Upload className="w-4 h-4 text-psg-gold" />
+                <Upload className="w-4 h-4 text-white" />
                 Found Item
               </Link>
 
               <Link
                 to="/report-lost"
-                className={`px-3.5 py-2 rounded-xl text-xs lg:text-sm font-bold transition-all flex items-center gap-1.5 ${
+                className={`px-3 py-2 rounded-xl text-xs lg:text-sm font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${
                   isActive('/report-lost')
-                    ? 'text-psg-gold bg-white/10 shadow-inner'
-                    : 'text-slate-200 hover:text-white hover:bg-white/5'
+                    ? 'text-white bg-white/15 shadow-inner'
+                    : 'text-slate-200 hover:text-white hover:bg-white/10'
                 }`}
               >
-                <PlusCircle className="w-4 h-4 text-rose-400" />
+                <PlusCircle className="w-4 h-4 text-rose-300" />
                 Report Lost
               </Link>
 
               <Link
                 to="/my-items"
-                className={`px-3.5 py-2 rounded-xl text-xs lg:text-sm font-bold transition-all flex items-center gap-1.5 ${
+                className={`px-3 py-2 rounded-xl text-xs lg:text-sm font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${
                   isActive('/my-items')
-                    ? 'text-psg-gold bg-white/10 shadow-inner'
-                    : 'text-slate-200 hover:text-white hover:bg-white/5'
+                    ? 'text-white bg-white/15 shadow-inner'
+                    : 'text-slate-200 hover:text-white hover:bg-white/10'
                 }`}
               >
-                <FolderHeart className="w-4 h-4 text-blue-300" />
+                <FolderHeart className="w-4 h-4 text-sky-300" />
                 My Items
               </Link>
 
               {isAdmin && (
                 <Link
                   to="/admin"
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all flex items-center gap-1.5 border ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all flex items-center gap-1.5 border whitespace-nowrap ml-1 ${
                     isActive('/admin')
-                      ? 'bg-psg-gold text-psg-navy border-psg-gold shadow-gold'
-                      : 'bg-psg-gold/20 text-psg-gold border-psg-gold/40 hover:bg-psg-gold hover:text-psg-navy'
+                      ? 'bg-white text-psg-navy border-white shadow-md'
+                      : 'bg-white/10 text-white border-white/30 hover:bg-white hover:text-psg-navy'
                   }`}
                 >
                   <Shield className="w-4 h-4" />
@@ -128,13 +128,13 @@ export default function Navbar() {
               </Link>
               <Link
                 to="/login"
-                className="px-5 py-2 text-xs lg:text-sm font-extrabold text-psg-gold border border-psg-gold/40 hover:border-psg-gold hover:bg-psg-gold/10 rounded-xl transition"
+                className="px-5 py-2 text-xs lg:text-sm font-extrabold text-white border border-white/40 hover:border-white hover:bg-white/10 rounded-xl transition"
               >
                 Sign In
               </Link>
               <Link
                 to="/register"
-                className="px-5 py-2 text-xs lg:text-sm font-extrabold text-psg-navy bg-gradient-to-r from-psg-gold to-amber-400 hover:from-amber-400 hover:to-psg-gold rounded-xl shadow-lg shadow-psg-gold/25 transition-all transform hover:-translate-y-0.5"
+                className="px-5 py-2 text-xs lg:text-sm font-extrabold text-psg-navy bg-white hover:bg-slate-100 rounded-xl shadow-lg transition-all transform hover:-translate-y-0.5"
               >
                 Create Account
               </Link>
@@ -167,7 +167,7 @@ export default function Navbar() {
                       <div className="flex items-center gap-2">
                         <span className="font-extrabold text-psg-navy text-sm">Campus Notifications</span>
                         {unreadCount > 0 && (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-psg-gold/20 text-psg-amber border border-psg-gold/30">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-psg-navy border border-blue-200">
                             {unreadCount} new
                           </span>
                         )}
@@ -235,12 +235,17 @@ export default function Navbar() {
                 to="/profile"
                 className="flex items-center gap-2 pl-2 pr-3.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 transition-all text-white"
               >
-                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-psg-gold to-amber-500 text-psg-navy flex items-center justify-center font-extrabold text-xs uppercase overflow-hidden shadow">
+                <div className="w-7 h-7 rounded-lg bg-psg-navy text-white border border-white/30 flex items-center justify-center font-extrabold text-xs uppercase overflow-hidden shadow relative">
                   {user.profile_photo ? (
-                    <img src={user.profile_photo} alt={user.name} className="w-full h-full object-cover" />
-                  ) : (
-                    user.name?.charAt(0) || 'U'
-                  )}
+                    <img
+                      src={user.profile_photo}
+                      alt={user.name}
+                      className="w-full h-full object-cover absolute inset-0"
+                      referrerPolicy="no-referrer"
+                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                    />
+                  ) : null}
+                  <span>{user.name?.charAt(0) || 'U'}</span>
                 </div>
                 <span className="text-xs font-bold truncate max-w-[100px]">
                   {user.name?.split(' ')[0]}
@@ -285,12 +290,12 @@ export default function Navbar() {
           {isAuthenticated ? (
             <>
               <div className="py-2.5 border-b border-white/10 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-psg-gold text-psg-navy flex items-center justify-center font-black text-sm">
+                <div className="w-10 h-10 rounded-xl bg-white text-psg-navy flex items-center justify-center font-black text-sm">
                   {user.name?.charAt(0)}
                 </div>
                 <div>
                   <p className="text-sm font-bold text-white">{user.name}</p>
-                  <p className="text-xs text-psg-gold font-medium">Roll / ID: {user.user_id}</p>
+                  <p className="text-xs text-slate-300 font-medium">Roll / ID: {user.user_id}</p>
                 </div>
               </div>
               <Link
@@ -339,7 +344,7 @@ export default function Navbar() {
                 <Link
                   to="/admin"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="block px-3.5 py-2.5 rounded-xl text-sm font-extrabold text-psg-navy bg-psg-gold"
+                  className="block px-3.5 py-2.5 rounded-xl text-sm font-extrabold text-psg-navy bg-white"
                 >
                   Admin Control Portal
                 </Link>
@@ -366,14 +371,14 @@ export default function Navbar() {
               <Link
                 to="/login"
                 onClick={() => setMobileMenuOpen(false)}
-                className="block w-full py-3 px-4 text-center font-bold text-psg-gold border border-psg-gold/40 rounded-xl"
+                className="block w-full py-3 px-4 text-center font-bold text-white border border-white/40 rounded-xl"
               >
                 Sign In
               </Link>
               <Link
                 to="/register"
                 onClick={() => setMobileMenuOpen(false)}
-                className="block w-full py-3 px-4 text-center font-extrabold text-psg-navy bg-psg-gold rounded-xl shadow-lg"
+                className="block w-full py-3 px-4 text-center font-extrabold text-psg-navy bg-white rounded-xl shadow-lg"
               >
                 Create Account
               </Link>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, AlertCircle, ArrowRight, ArrowLeft, User, Mail, Phone, CheckCircle2, ShieldCheck, Building, Calendar, KeyRound, Smartphone } from 'lucide-react';
+import { Eye, EyeOff, AlertCircle, ArrowRight, ArrowLeft, User, Mail, Phone, CheckCircle2, ShieldCheck, Building, Calendar, KeyRound } from 'lucide-react';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { firebaseAuth } from '../services/firebase';
 import { useAuth } from '../context/AuthContext';
@@ -16,7 +16,7 @@ const GoogleIcon = () => (
 );
 
 export default function RegisterPage() {
-  const [step, setStep] = useState(1); // 1: Personal, 2: Credentials, 3: Phone/OTP Verification
+  const [step, setStep] = useState(1); // 1: Personal, 2: Credentials, 3: SMTP Email OTP Verification
   const [formData, setFormData] = useState({
     name: '',
     user_id: '',
@@ -34,24 +34,15 @@ export default function RegisterPage() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Registration Success & Email Verification State
-  const [registrationSuccess, setRegistrationSuccess] = useState(false);
-  const [emailVerificationLink, setEmailVerificationLink] = useState('');
-  const [createdUser, setCreatedUser] = useState(null);
-
   // Google Flow State
   const [isGoogleFlow, setIsGoogleFlow] = useState(false);
   const [googleIdToken, setGoogleIdToken] = useState('');
 
-  // OTP Verification State
-  const [otpSent, setOtpSent] = useState(false);
-  const [sessionId, setSessionId] = useState('');
-  const [deliveryMethod, setDeliveryMethod] = useState('VOICE');
-  const [otpCode, setOtpCode] = useState('');
-  const [otpVerified, setOtpVerified] = useState(false);
-  const [otpNotice, setOtpNotice] = useState('');
-  const [otpLoading, setOtpLoading] = useState(false);
-  const [verifyingOtp, setVerifyingOtp] = useState(false);
+  // SMTP Email OTP State
+  const [emailOtpSent, setEmailOtpSent] = useState(false);
+  const [emailOtpCode, setEmailOtpCode] = useState('');
+  const [emailOtpLoading, setEmailOtpLoading] = useState(false);
+  const [emailOtpNotice, setEmailOtpNotice] = useState('');
 
   const { register, loginWithFirebase } = useAuth();
   const navigate = useNavigate();
@@ -102,99 +93,56 @@ export default function RegisterPage() {
     } catch (err) {
       console.error('Google authentication error:', err);
       let errMsg = err.response?.data?.message || err.message || 'Google authentication failed.';
-      if (err.response?.status === 502 || (err.message && err.message.includes('502'))) {
-        errMsg = 'Backend server is temporarily starting up. Please click "Register with Google" again in a few seconds.';
-      }
       setError(errMsg);
     } finally {
       setGoogleLoading(false);
     }
   };
 
-  // Trigger Send Mobile OTP
-  const handleSendOtp = async (e) => {
+  // Dispatch 6-Digit SMTP OTP to User's Email
+  const handleSendEmailOtp = async (e) => {
     if (e) e.preventDefault();
-    const cleanPhone = formData.phone.trim();
-    if (!cleanPhone || cleanPhone.length < 8) {
-      setError('Please enter a valid 10-digit mobile phone number before requesting OTP.');
+    const cleanEmail = formData.email.trim();
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      setError('Please enter a valid campus email address.');
       return;
     }
 
     setError('');
-    setOtpLoading(true);
-    setOtpNotice('');
+    setEmailOtpLoading(true);
+    setEmailOtpNotice('');
 
     try {
-      const res = await fetch('/api/auth/send-otp', {
+      const res = await fetch('/api/auth/send-email-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: cleanPhone }),
+        body: JSON.stringify({ email: cleanEmail, name: formData.name }),
       });
       const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.message || 'Failed to send OTP. Please check your mobile number.');
+      if (!res.ok) {
+        throw new Error(data.message || 'Failed to send verification email.');
       }
-      setSessionId(data.sessionId);
-      setDeliveryMethod(data.deliveryMethod || 'VOICE');
-      setOtpCode(''); // Clear any old OTP code when a new one is sent
-      setOtpSent(true);
-      setOtpNotice(`✨ 4-digit OTP code sent via Call to ${cleanPhone}. Please enter it.`);
+      setEmailOtpSent(true);
+      setEmailOtpNotice(`✉️ 6-digit OTP sent to ${cleanEmail} via QuickFinder SMTP.`);
+      setStep(3);
     } catch (err) {
-      console.error('Send OTP error:', err);
-      setError(err.message || 'Failed to send OTP via Call. Please try again.');
+      console.error('Send SMTP OTP error:', err);
+      setError(err.message || 'Failed to send OTP to email. Please verify SMTP configuration.');
     } finally {
-      setOtpLoading(false);
+      setEmailOtpLoading(false);
     }
   };
 
-  // Trigger Verify Mobile OTP
-  const handleVerifyOtp = async (e) => {
-    if (e) e.preventDefault();
-    const cleanCode = otpCode.trim();
-    if (!cleanCode || cleanCode.length !== 4) {
-      setError('Please enter the full 4-digit OTP code received on your mobile phone.');
-      return;
-    }
-
-    setError('');
-    setVerifyingOtp(true);
-
-    try {
-      const res = await fetch('/api/auth/verify-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId, otpCode: cleanCode, deliveryMethod }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.message || 'Invalid OTP code. Please check and try again.');
-      }
-      setOtpVerified(true);
-      setOtpNotice(`✨ Mobile number ${formData.phone} successfully verified!`);
-    } catch (err) {
-      console.error('Verify OTP error:', err);
-      setError(err.message || 'Failed to verify OTP code.');
-    } finally {
-      setVerifyingOtp(false);
-    }
-  };
-
-  // Step 1 Submit (Manual Flow)
+  // Step 1 Submit
   const handleStep1Next = (e) => {
     e.preventDefault();
     setError('');
-    if (!formData.name.trim()) {
-      setError('Please enter your full name.');
-      return;
-    }
-    if (!formData.user_id.trim()) {
-      setError('Please enter your Student Roll No. or Staff ID.');
-      return;
-    }
+    if (!formData.name.trim()) { setError('Please enter your full name.'); return; }
+    if (!formData.user_id.trim()) { setError('Please enter your Student Roll No. or Staff ID.'); return; }
     setStep(2);
   };
 
-  // Step 2 Submit (Manual Flow)
+  // Step 2 Submit
   const handleStep2Next = (e) => {
     e.preventDefault();
     setError('');
@@ -202,27 +150,16 @@ export default function RegisterPage() {
       setError('Please enter a valid email address.');
       return;
     }
-    if (!hasMinLen) {
-      setError('Password must be at least 8 characters long.');
-      return;
-    }
-    if (!hasCap) {
-      setError('Password must contain at least one capital letter (A-Z).');
-      return;
-    }
-    if (!hasNum) {
-      setError('Password must contain at least one number (0-9).');
-      return;
-    }
-    if (!hasSpec) {
-      setError('Password must contain at least one special character (!@#$%^&*).');
+    if (!hasMinLen || !hasCap || !hasNum || !hasSpec) {
+      setError('Please ensure your password meets all complexity requirements.');
       return;
     }
     if (!passwordsMatch) {
       setError('Passwords do not match.');
       return;
     }
-    setStep(3);
+
+    handleSendEmailOtp();
   };
 
   // Google Registration Submit
@@ -230,21 +167,8 @@ export default function RegisterPage() {
     e.preventDefault();
     setError('');
 
-    if (!formData.name.trim()) {
-      setError('Please enter your full name.');
-      return;
-    }
-    if (!formData.user_id.trim()) {
-      setError('Please enter your Student Roll No. or Staff ID.');
-      return;
-    }
-    if (!formData.phone.trim() || formData.phone.trim().length < 8) {
-      setError('Please enter your mobile phone number.');
-      return;
-    }
-
-    if (!otpVerified) {
-      setError('Mobile phone number verification via OTP is mandatory before completing registration.');
+    if (!formData.name.trim() || !formData.user_id.trim() || !formData.phone.trim()) {
+      setError('Please complete all required fields.');
       return;
     }
 
@@ -269,18 +193,18 @@ export default function RegisterPage() {
     }
   };
 
-  // Manual Registration Submit
+  // Manual Registration Submit (with Email OTP Verification)
   const handleManualFinalSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
-    if (!formData.phone.trim() || formData.phone.trim().length < 8) {
+    if (!formData.phone.trim()) {
       setError('Please enter your mobile phone number.');
       return;
     }
 
-    if (!otpVerified) {
-      setError('Mobile phone number verification via OTP is mandatory before completing account creation.');
+    if (!emailOtpCode || emailOtpCode.trim().length !== 6) {
+      setError('Please enter the 6-digit OTP sent to your email.');
       return;
     }
 
@@ -289,24 +213,22 @@ export default function RegisterPage() {
       const data = new FormData();
       data.append('name', formData.name.trim());
       data.append('user_id', formData.user_id.trim());
+      data.append('department', formData.department);
+      data.append('year_of_study', formData.year_of_study);
       data.append('email', formData.email.trim());
       data.append('phone', formData.phone.trim());
       data.append('password', formData.password);
       data.append('confirmPassword', formData.confirmPassword);
+      data.append('otpCode', emailOtpCode.trim());
       if (profilePhoto) {
         data.append('profile_photo', profilePhoto);
       }
 
-      const res = await register(data);
-      if (res?.emailVerificationLink) {
-        setEmailVerificationLink(res.emailVerificationLink);
-        setRegistrationSuccess(true);
-      } else {
-        navigate('/dashboard', { replace: true });
-      }
+      await register(data);
+      navigate('/dashboard', { replace: true });
     } catch (err) {
       console.error('Registration error:', err);
-      setError(err.response?.data?.message || err.message || 'Registration failed. Please check your details.');
+      setError(err.response?.data?.message || err.message || 'Registration failed.');
     } finally {
       setLoading(false);
     }
@@ -316,107 +238,52 @@ export default function RegisterPage() {
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-4 py-6 bg-slate-50">
       <div className="max-w-xl w-full my-auto space-y-5 bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-xl shadow-psg-navy/10">
         
-        {/* Registration Success & Verification Card */}
-        {registrationSuccess ? (
-          <div className="space-y-6 text-center animate-scale-up py-4">
-            <div className="w-16 h-16 bg-emerald-100 border-2 border-emerald-300 rounded-full flex items-center justify-center mx-auto shadow-inner text-emerald-600">
-              <CheckCircle2 className="w-10 h-10" />
-            </div>
-
-            <div className="space-y-2">
-              <span className="inline-block px-3 py-1 bg-emerald-100 border border-emerald-300 text-emerald-800 text-[11px] font-black tracking-wider uppercase rounded-full">
-                Account Successfully Created
-              </span>
-              <h2 className="text-2xl font-black text-psg-navy tracking-tight">
-                Verify Your Email Address
-              </h2>
-              <p className="text-xs text-slate-600 font-medium max-w-md mx-auto leading-relaxed">
-                Welcome to Quick Finder, <strong>{formData.name}</strong>! Your account for <strong>{formData.email}</strong> has been registered in <strong>Firebase Auth</strong> and saved to <strong>Firebase Realtime Database</strong>.
-              </p>
-            </div>
-
-            {emailVerificationLink && (
-              <div className="p-5 bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-3xl space-y-3 shadow-md text-left">
-                <div className="flex items-center gap-2 text-psg-navy">
-                  <Mail className="w-5 h-5 text-psg-blue flex-shrink-0" />
-                  <h3 className="font-extrabold text-sm">Official Firebase Verification Link</h3>
-                </div>
-                <p className="text-xs text-slate-600 leading-relaxed font-medium">
-                  Click the button below to verify your email address via Firebase Auth. Once verified, your status will update across the platform.
-                </p>
-                <div className="pt-2 flex flex-col gap-2.5">
-                  <a
-                    href={emailVerificationLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full inline-flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm shadow-lg shadow-emerald-600/20 transition-all transform hover:-translate-y-0.5"
-                  >
-                    <span>CLICK HERE TO VERIFY EMAIL</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </a>
-                </div>
-              </div>
-            )}
-
-            <div className="pt-2 space-y-3">
-              <button
-                type="button"
-                onClick={() => navigate('/dashboard', { replace: true })}
-                className="w-full py-3.5 px-4 rounded-2xl bg-psg-navy hover:bg-slate-900 text-white font-extrabold text-sm shadow-md transition-all flex items-center justify-center gap-2 transform hover:-translate-y-0.5"
-              >
-                <span>CONTINUE TO DASHBOARD</span>
-                <ArrowRight className="w-4 h-4 text-psg-gold" />
-              </button>
-            </div>
-          </div>
-        ) : (
-          <>
-            {/* Header */}
-            <div className="text-center space-y-2">
-              <PsgLogo variant="light" size="lg" showTagline={true} className="justify-center" />
-              <h2 className="text-xl font-extrabold text-psg-navy tracking-tight mt-1">
-                Create Account
-              </h2>
-              <p className="text-xs text-slate-500 font-medium">
-                {isGoogleFlow
-                  ? 'Complete your profile details and verify your mobile phone to finalize registration.'
-                  : 'Register your profile to report lost belongings and track matches across campus.'}
-              </p>
-            </div>
+        {/* Header */}
+        <div className="text-center space-y-2">
+          <PsgLogo variant="light" size="lg" showTagline={true} className="justify-center" />
+          <h2 className="text-xl font-extrabold text-psg-navy tracking-tight mt-1">
+            Create Account
+          </h2>
+          <p className="text-xs text-slate-500 font-medium">
+            {isGoogleFlow
+              ? 'Complete profile details to finalize registration.'
+              : 'Register your account with verified SMTP email security.'}
+          </p>
+        </div>
 
         {/* Google Flow Banner */}
         {isGoogleFlow && (
-          <div className="p-3 bg-blue-50 border border-blue-200 text-psg-blue rounded-2xl text-xs font-extrabold flex items-center justify-between animate-fade-in-down">
+          <div className="p-3 bg-blue-50 border border-blue-200 text-psg-blue rounded-2xl text-xs font-extrabold flex items-center justify-between">
             <div className="flex items-center gap-2">
               <GoogleIcon />
-              <span>Google Email Verified: <strong>{formData.email}</strong></span>
+              <span>Google Verified Email: <strong>{formData.email}</strong></span>
             </div>
           </div>
         )}
 
-        {/* Step Indicator Bar (For Manual Signup) */}
+        {/* Step Indicator Bar */}
         {!isGoogleFlow && (
           <div className="flex items-center justify-between px-2 pt-1">
             <div className={`flex items-center gap-2 text-xs font-extrabold ${step === 1 ? 'text-psg-blue' : 'text-slate-400'}`}>
-              <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${step === 1 ? 'bg-psg-blue text-white shadow-md' : 'bg-slate-100 text-slate-500'}`}>1</span>
-              <span>Details</span>
+              <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${step === 1 ? 'bg-psg-navy text-white shadow-md' : 'bg-slate-100 text-slate-500'}`}>1</span>
+              <span>Personal</span>
             </div>
-            <div className={`flex-1 h-0.5 mx-3 ${step >= 2 ? 'bg-psg-blue' : 'bg-slate-200'}`}></div>
+            <div className={`flex-1 h-0.5 mx-3 ${step >= 2 ? 'bg-psg-navy' : 'bg-slate-200'}`} />
             <div className={`flex items-center gap-2 text-xs font-extrabold ${step === 2 ? 'text-psg-blue' : 'text-slate-400'}`}>
-              <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${step === 2 ? 'bg-psg-blue text-white shadow-md' : 'bg-slate-100 text-slate-500'}`}>2</span>
+              <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${step === 2 ? 'bg-psg-navy text-white shadow-md' : 'bg-slate-100 text-slate-500'}`}>2</span>
               <span>Credentials</span>
             </div>
-            <div className={`flex-1 h-0.5 mx-3 ${step >= 3 ? 'bg-psg-blue' : 'bg-slate-200'}`}></div>
+            <div className={`flex-1 h-0.5 mx-3 ${step >= 3 ? 'bg-psg-navy' : 'bg-slate-200'}`} />
             <div className={`flex items-center gap-2 text-xs font-extrabold ${step === 3 ? 'text-psg-blue' : 'text-slate-400'}`}>
-              <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${step === 3 ? 'bg-psg-blue text-white shadow-md' : 'bg-slate-100 text-slate-500'}`}>3</span>
-              <span>Verify Phone</span>
+              <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${step === 3 ? 'bg-psg-navy text-white shadow-md' : 'bg-slate-100 text-slate-500'}`}>3</span>
+              <span>SMTP OTP</span>
             </div>
           </div>
         )}
 
         {/* Error Alert */}
         {error && (
-          <div className="flex items-start gap-2.5 p-3.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-2xl text-xs animate-fade-in-down">
+          <div className="flex items-start gap-2.5 p-3.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-2xl text-xs">
             <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
             <span className="leading-relaxed font-medium">{error}</span>
           </div>
@@ -424,248 +291,69 @@ export default function RegisterPage() {
 
         {/* --- GOOGLE REGISTRATION FLOW --- */}
         {isGoogleFlow && (
-          <form onSubmit={handleGoogleSubmit} className="space-y-4 animate-fade-in-up">
+          <form onSubmit={handleGoogleSubmit} className="space-y-4">
             <div className="space-y-3.5">
-              
-              {/* Full Name */}
               <div>
                 <label className="block text-xs font-extrabold uppercase tracking-wider text-psg-navy mb-1.5">
                   Full Name *
                 </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    name="name"
-                    required
-                    value={formData.name}
-                    onChange={handleChange}
-                    placeholder="e.g. Arun Kumar"
-                    className="w-full px-3.5 py-3 rounded-xl border border-slate-300 text-sm focus:border-psg-blue focus:ring-2 focus:ring-psg-blue/20 outline-none pl-10 transition"
-                  />
-                  <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                </div>
+                <input
+                  type="text"
+                  name="name"
+                  required
+                  value={formData.name}
+                  onChange={handleChange}
+                  className="w-full px-3.5 py-3 rounded-xl border border-slate-300 text-sm focus:border-psg-blue outline-none"
+                />
               </div>
 
-              {/* Student Roll Number / Staff ID */}
               <div>
                 <label className="block text-xs font-extrabold uppercase tracking-wider text-psg-navy mb-1.5">
                   Student Roll No. / Staff ID *
                 </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    name="user_id"
-                    required
-                    value={formData.user_id}
-                    onChange={handleChange}
-                    placeholder="e.g. 26CS101 or arun_k"
-                    className="w-full px-3.5 py-3 rounded-xl border border-slate-300 text-sm focus:border-psg-blue focus:ring-2 focus:ring-psg-blue/20 outline-none pl-10 transition"
-                  />
-                  <ShieldCheck className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                </div>
+                <input
+                  type="text"
+                  name="user_id"
+                  required
+                  value={formData.user_id}
+                  onChange={handleChange}
+                  className="w-full px-3.5 py-3 rounded-xl border border-slate-300 text-sm focus:border-psg-blue outline-none"
+                />
               </div>
 
-              {/* Department & Year Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                <div>
-                  <label className="block text-xs font-extrabold uppercase tracking-wider text-psg-navy mb-1.5">
-                    Department *
-                  </label>
-                  <div className="relative">
-                    <select
-                      name="department"
-                      value={formData.department}
-                      onChange={handleChange}
-                      className="w-full px-3.5 py-3 rounded-xl border border-slate-300 text-sm focus:border-psg-blue focus:ring-2 focus:ring-psg-blue/20 outline-none pl-10 transition bg-white"
-                    >
-                      <option value="B.Sc Computer Science">B.Sc Computer Science</option>
-                      <option value="B.Com Commerce">B.Com Commerce</option>
-                      <option value="B.Sc Physics">B.Sc Physics</option>
-                      <option value="B.Sc Mathematics">B.Sc Mathematics</option>
-                      <option value="BBA Management">BBA Management</option>
-                      <option value="B.A English Literature">B.A English Literature</option>
-                      <option value="M.Sc Computer Science">M.Sc Computer Science</option>
-                      <option value="Other Department">Other Department</option>
-                    </select>
-                    <Building className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-extrabold uppercase tracking-wider text-psg-navy mb-1.5">
-                    Year of Study *
-                  </label>
-                  <div className="relative">
-                    <select
-                      name="year_of_study"
-                      value={formData.year_of_study}
-                      onChange={handleChange}
-                      className="w-full px-3.5 py-3 rounded-xl border border-slate-300 text-sm focus:border-psg-blue focus:ring-2 focus:ring-psg-blue/20 outline-none pl-10 transition bg-white"
-                    >
-                      <option value="1st Year">1st Year</option>
-                      <option value="2nd Year">2nd Year</option>
-                      <option value="3rd Year">3rd Year</option>
-                      <option value="PG / Research">PG / Research</option>
-                      <option value="Faculty / Staff">Faculty / Staff</option>
-                    </select>
-                    <Calendar className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Mobile Phone Number */}
               <div>
                 <label className="block text-xs font-extrabold uppercase tracking-wider text-psg-navy mb-1.5">
                   Mobile Phone Number *
                 </label>
-                <div className="relative flex gap-2">
-                  <div className="relative flex-1">
-                    <input
-                      type="tel"
-                      name="phone"
-                      required
-                      disabled={otpSent || otpVerified}
-                      value={formData.phone}
-                      onChange={handleChange}
-                      placeholder="9876543210"
-                      className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 text-sm focus:border-psg-blue focus:ring-2 focus:ring-psg-blue/20 outline-none transition disabled:bg-slate-100 font-medium text-slate-800"
-                    />
-                    <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  </div>
-                  {!otpVerified && !otpSent && (
-                    <button
-                      type="button"
-                      onClick={handleSendOtp}
-                      disabled={otpLoading}
-                      className="px-4 py-3 bg-psg-navy hover:bg-slate-900 text-white font-extrabold text-xs rounded-xl transition flex items-center gap-1.5 disabled:opacity-60 flex-shrink-0 shadow"
-                    >
-                      {otpLoading ? (
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      ) : (
-                        <span>SEND OTP</span>
-                      )}
-                    </button>
-                  )}
-                  {otpSent && !otpVerified && (
-                    <button
-                      type="button"
-                      onClick={() => { setOtpSent(false); setOtpCode(''); }}
-                      className="px-3 py-3 border border-slate-300 hover:bg-slate-50 text-slate-600 font-bold text-xs rounded-xl transition flex-shrink-0"
-                    >
-                      Change
-                    </button>
-                  )}
-                </div>
+                <input
+                  type="tel"
+                  name="phone"
+                  required
+                  value={formData.phone}
+                  onChange={handleChange}
+                  placeholder="9876543210"
+                  className="w-full px-3.5 py-3 rounded-xl border border-slate-300 text-sm focus:border-psg-blue outline-none"
+                />
               </div>
-
-              {/* 4-Digit OTP Text Input Field */}
-              {otpSent && !otpVerified && (
-                <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3 animate-fade-in-up">
-                  <div className="flex items-center justify-between">
-                    <label className="block text-xs font-extrabold uppercase tracking-wider text-psg-navy">
-                      Enter 4-Digit OTP Code *
-                    </label>
-                    <button
-                      type="button"
-                      onClick={handleSendOtp}
-                      disabled={otpLoading || verifyingOtp}
-                      className="text-xs font-bold text-psg-blue hover:underline disabled:opacity-50"
-                    >
-                      {otpLoading ? 'Sending...' : 'Resend OTP'}
-                    </button>
-                  </div>
-                  
-                  <div className="relative">
-                    <input
-                      type="text"
-                      name="otpCode"
-                      maxLength={4}
-                      pattern="[0-9]*"
-                      value={otpCode}
-                      onChange={(e) => setOtpCode(e.target.value.replace(/[^0-9]/g, ''))}
-                      placeholder="1234"
-                      className="w-full text-center text-xl font-mono tracking-[0.4em] py-3 pl-10 pr-4 rounded-xl border border-slate-300 focus:border-psg-blue focus:ring-2 focus:ring-psg-blue/20 outline-none transition bg-white font-extrabold text-slate-800"
-                    />
-                    <KeyRound className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={handleVerifyOtp}
-                    disabled={verifyingOtp || otpCode.length !== 4}
-                    className="w-full py-3 px-4 rounded-xl bg-psg-navy hover:bg-slate-900 text-white font-extrabold text-xs shadow transition flex items-center justify-center gap-2 disabled:opacity-50"
-                  >
-                    {verifyingOtp ? (
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    ) : (
-                      <>
-                        <span>VERIFY OTP</span>
-                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                      </>
-                    )}
-                  </button>
-                </div>
-              )}
-
-              {/* Verification Status Banner */}
-              {otpNotice && (
-                <div className={`p-3 border rounded-2xl text-xs font-bold flex items-center justify-between shadow-sm animate-scale-up ${otpVerified ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-blue-50 border-blue-200 text-psg-navy'}`}>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className={`w-4 h-4 flex-shrink-0 ${otpVerified ? 'text-emerald-600' : 'text-psg-blue'}`} />
-                    <span>{otpNotice}</span>
-                  </div>
-                </div>
-              )}
-
             </div>
 
-            {/* Action Buttons */}
-            <div className="pt-3">
-              {!otpVerified ? (
-                <button
-                  type="button"
-                  onClick={otpSent ? handleVerifyOtp : handleSendOtp}
-                  disabled={otpLoading || (otpSent && otpCode.length !== 4)}
-                  className="w-full py-3.5 px-4 rounded-2xl bg-psg-navy hover:bg-slate-900 text-white font-extrabold text-sm shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-60"
-                >
-                  {otpLoading || verifyingOtp ? (
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <>
-                      <span>{otpSent ? 'VERIFY OTP CODE' : 'SEND OTP VIA CALL'}</span>
-                      <ArrowRight className="w-4 h-4 text-psg-gold" />
-                    </>
-                  )}
-                </button>
-              ) : (
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full py-3.5 px-4 rounded-2xl bg-psg-blue hover:bg-psg-royal text-white font-extrabold text-sm shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-60 transform hover:-translate-y-0.5"
-                >
-                  {loading ? (
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <>
-                      <span>COMPLETE REGISTRATION</span>
-                      <ArrowRight className="w-4 h-4 text-psg-gold" />
-                    </>
-                  )}
-                </button>
-              )}
-            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3.5 px-4 rounded-2xl bg-psg-navy hover:bg-psg-royal text-white font-extrabold text-sm shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+            >
+              {loading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <span>COMPLETE REGISTRATION</span>}
+            </button>
           </form>
         )}
 
         {/* --- MANUAL REGISTRATION FLOW --- */}
         {!isGoogleFlow && (
           <>
-            {/* STEP 1: Personal & Academic Info */}
+            {/* STEP 1: Personal Info */}
             {step === 1 && (
-              <form onSubmit={handleStep1Next} className="space-y-4 animate-fade-in-up">
+              <form onSubmit={handleStep1Next} className="space-y-4">
                 <div className="space-y-3.5">
-                  
-                  {/* Full Name */}
                   <div>
                     <label className="block text-xs font-extrabold uppercase tracking-wider text-psg-navy mb-1.5">
                       Full Name *
@@ -678,13 +366,12 @@ export default function RegisterPage() {
                         value={formData.name}
                         onChange={handleChange}
                         placeholder="e.g. Arun Kumar"
-                        className="w-full px-3.5 py-3 rounded-xl border border-slate-300 text-sm focus:border-psg-blue focus:ring-2 focus:ring-psg-blue/20 outline-none pl-10 transition"
+                        className="w-full px-3.5 py-3 pl-10 rounded-xl border border-slate-300 text-sm focus:border-psg-blue outline-none"
                       />
                       <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                     </div>
                   </div>
 
-                  {/* Student Roll Number / Staff ID */}
                   <div>
                     <label className="block text-xs font-extrabold uppercase tracking-wider text-psg-navy mb-1.5">
                       Student Roll No. / Staff ID *
@@ -696,79 +383,67 @@ export default function RegisterPage() {
                         required
                         value={formData.user_id}
                         onChange={handleChange}
-                        placeholder="e.g. 26CS101 or arun_k"
-                        className="w-full px-3.5 py-3 rounded-xl border border-slate-300 text-sm focus:border-psg-blue focus:ring-2 focus:ring-psg-blue/20 outline-none pl-10 transition"
+                        placeholder="e.g. 26CS101"
+                        className="w-full px-3.5 py-3 pl-10 rounded-xl border border-slate-300 text-sm focus:border-psg-blue outline-none"
                       />
                       <ShieldCheck className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                     </div>
                   </div>
 
-                  {/* Department & Year Grid */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     <div>
                       <label className="block text-xs font-extrabold uppercase tracking-wider text-psg-navy mb-1.5">
-                        Department *
+                        Department
                       </label>
-                      <div className="relative">
-                        <select
-                          name="department"
-                          value={formData.department}
-                          onChange={handleChange}
-                          className="w-full px-3.5 py-3 rounded-xl border border-slate-300 text-sm focus:border-psg-blue focus:ring-2 focus:ring-psg-blue/20 outline-none pl-10 transition bg-white"
-                        >
-                          <option value="B.Sc Computer Science">B.Sc Computer Science</option>
-                          <option value="B.Com Commerce">B.Com Commerce</option>
-                          <option value="B.Sc Physics">B.Sc Physics</option>
-                          <option value="B.Sc Mathematics">B.Sc Mathematics</option>
-                          <option value="BBA Management">BBA Management</option>
-                          <option value="B.A English Literature">B.A English Literature</option>
-                          <option value="M.Sc Computer Science">M.Sc Computer Science</option>
-                          <option value="Other Department">Other Department</option>
-                        </select>
-                        <Building className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                      </div>
+                      <select
+                        name="department"
+                        value={formData.department}
+                        onChange={handleChange}
+                        className="w-full px-3.5 py-3 rounded-xl border border-slate-300 text-sm bg-white outline-none"
+                      >
+                        <option value="B.Sc Computer Science">B.Sc Computer Science</option>
+                        <option value="B.Com Commerce">B.Com Commerce</option>
+                        <option value="B.Sc Physics">B.Sc Physics</option>
+                        <option value="B.Sc Mathematics">B.Sc Mathematics</option>
+                        <option value="BBA Management">BBA Management</option>
+                        <option value="Other Department">Other Department</option>
+                      </select>
                     </div>
 
                     <div>
                       <label className="block text-xs font-extrabold uppercase tracking-wider text-psg-navy mb-1.5">
-                        Year of Study *
+                        Year of Study
                       </label>
-                      <div className="relative">
-                        <select
-                          name="year_of_study"
-                          value={formData.year_of_study}
-                          onChange={handleChange}
-                          className="w-full px-3.5 py-3 rounded-xl border border-slate-300 text-sm focus:border-psg-blue focus:ring-2 focus:ring-psg-blue/20 outline-none pl-10 transition bg-white"
-                        >
-                          <option value="1st Year">1st Year</option>
-                          <option value="2nd Year">2nd Year</option>
-                          <option value="3rd Year">3rd Year</option>
-                          <option value="PG / Research">PG / Research</option>
-                          <option value="Faculty / Staff">Faculty / Staff</option>
-                        </select>
-                        <Calendar className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                      </div>
+                      <select
+                        name="year_of_study"
+                        value={formData.year_of_study}
+                        onChange={handleChange}
+                        className="w-full px-3.5 py-3 rounded-xl border border-slate-300 text-sm bg-white outline-none"
+                      >
+                        <option value="1st Year">1st Year</option>
+                        <option value="2nd Year">2nd Year</option>
+                        <option value="3rd Year">3rd Year</option>
+                        <option value="PG / Research">PG / Research</option>
+                        <option value="Faculty / Staff">Faculty / Staff</option>
+                      </select>
                     </div>
                   </div>
-
                 </div>
 
                 <button
                   type="submit"
-                  className="w-full py-3.5 px-4 rounded-2xl bg-psg-blue hover:bg-psg-royal text-white font-extrabold text-sm shadow-md transition-all flex items-center justify-center gap-2 transform hover:-translate-y-0.5 mt-4"
+                  className="w-full py-3.5 px-4 rounded-2xl bg-psg-navy hover:bg-psg-royal text-white font-extrabold text-sm shadow-md transition-all flex items-center justify-center gap-2 mt-4"
                 >
                   <span>CONTINUE TO CREDENTIALS</span>
-                  <ArrowRight className="w-4 h-4 text-psg-gold" />
+                  <ArrowRight className="w-4 h-4" />
                 </button>
               </form>
             )}
 
             {/* STEP 2: Email & Password Credentials */}
             {step === 2 && (
-              <form onSubmit={handleStep2Next} className="space-y-4 animate-fade-in-up">
+              <form onSubmit={handleStep2Next} className="space-y-4">
                 <div className="space-y-3.5">
-                  
-                  {/* Email Address */}
                   <div>
                     <label className="block text-xs font-extrabold uppercase tracking-wider text-psg-navy mb-1.5">
                       Email Address *
@@ -781,13 +456,12 @@ export default function RegisterPage() {
                         value={formData.email}
                         onChange={handleChange}
                         placeholder="student@psgcas.ac.in"
-                        className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 text-sm focus:border-psg-blue focus:ring-2 focus:ring-psg-blue/20 outline-none transition"
+                        className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 text-sm focus:border-psg-blue outline-none"
                       />
                       <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                     </div>
                   </div>
 
-                  {/* Password */}
                   <div>
                     <label className="block text-xs font-extrabold uppercase tracking-wider text-psg-navy mb-1.5">
                       Password *
@@ -800,7 +474,7 @@ export default function RegisterPage() {
                         value={formData.password}
                         onChange={handleChange}
                         placeholder="Min 8 chars, 1 Cap, 1 Num, 1 Symbol"
-                        className="w-full pl-10 pr-10 py-3 rounded-xl border border-slate-300 text-sm focus:border-psg-blue focus:ring-2 focus:ring-psg-blue/20 outline-none transition"
+                        className="w-full pl-10 pr-10 py-3 rounded-xl border border-slate-300 text-sm focus:border-psg-blue outline-none"
                       />
                       <KeyRound className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                       <button
@@ -813,178 +487,131 @@ export default function RegisterPage() {
                     </div>
                   </div>
 
-                  {/* Password Rules Checklist */}
                   {formData.password && (
                     <div className="grid grid-cols-2 gap-2 text-[11px] font-bold p-3 bg-slate-50 rounded-xl border border-slate-200">
                       <div className={`flex items-center gap-1.5 ${hasMinLen ? 'text-emerald-600' : 'text-slate-400'}`}>
-                        <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" />
-                        <span>Min 8 Characters</span>
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>Min 8 Chars</span>
                       </div>
                       <div className={`flex items-center gap-1.5 ${hasCap ? 'text-emerald-600' : 'text-slate-400'}`}>
-                        <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" />
-                        <span>1 Capital Letter (A-Z)</span>
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>1 Capital (A-Z)</span>
                       </div>
                       <div className={`flex items-center gap-1.5 ${hasNum ? 'text-emerald-600' : 'text-slate-400'}`}>
-                        <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" />
+                        <CheckCircle2 className="w-3.5 h-3.5" />
                         <span>1 Number (0-9)</span>
                       </div>
                       <div className={`flex items-center gap-1.5 ${hasSpec ? 'text-emerald-600' : 'text-slate-400'}`}>
-                        <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" />
-                        <span>1 Special Char (!@#$)</span>
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>1 Symbol (!@#$)</span>
                       </div>
                     </div>
                   )}
 
-                  {/* Confirm Password */}
                   <div>
                     <label className="block text-xs font-extrabold uppercase tracking-wider text-psg-navy mb-1.5">
                       Confirm Password *
                     </label>
-                    <div className="relative">
-                      <input
-                        type={showPassword ? 'text' : 'password'}
-                        name="confirmPassword"
-                        required
-                        value={formData.confirmPassword}
-                        onChange={handleChange}
-                        placeholder="Repeat password"
-                        className="w-full px-4 py-3 rounded-xl border border-slate-300 text-sm focus:border-psg-blue focus:ring-2 focus:ring-psg-blue/20 outline-none transition"
-                      />
-                      {formData.confirmPassword && (
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold">
-                          {passwordsMatch ? (
-                            <span className="text-emerald-600 flex items-center gap-1"><CheckCircle2 className="w-4 h-4" /> Match</span>
-                          ) : (
-                            <span className="text-rose-500">No match</span>
-                          )}
-                        </div>
-                      )}
-                    </div>
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      name="confirmPassword"
+                      required
+                      value={formData.confirmPassword}
+                      onChange={handleChange}
+                      placeholder="Repeat password"
+                      className="w-full px-4 py-3 rounded-xl border border-slate-300 text-sm focus:border-psg-blue outline-none"
+                    />
                   </div>
-
                 </div>
 
-                {/* Action Buttons */}
                 <div className="flex items-center gap-3 pt-2">
                   <button
                     type="button"
                     onClick={() => setStep(1)}
-                    className="px-5 py-3 rounded-2xl border border-slate-300 text-slate-700 font-bold text-xs sm:text-sm hover:bg-slate-50 transition flex items-center gap-1.5"
+                    className="px-5 py-3 rounded-2xl border border-slate-300 text-slate-700 font-bold text-xs hover:bg-slate-50 transition"
                   >
-                    <ArrowLeft className="w-4 h-4" />
-                    <span>Back</span>
+                    Back
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 py-3.5 px-4 rounded-2xl bg-psg-blue hover:bg-psg-royal text-white font-extrabold text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-2 transform hover:-translate-y-0.5"
+                    disabled={emailOtpLoading}
+                    className="flex-1 py-3.5 px-4 rounded-2xl bg-psg-navy hover:bg-psg-royal text-white font-extrabold text-xs shadow-md transition flex items-center justify-center gap-2 disabled:opacity-60"
                   >
-                    <span>CONTINUE TO VERIFY PHONE</span>
-                    <ArrowRight className="w-4 h-4 text-psg-gold" />
+                    {emailOtpLoading ? (
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <span>SEND SMTP OTP TO EMAIL</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </>
+                    )}
                   </button>
                 </div>
               </form>
             )}
 
-            {/* STEP 3: Phone Number & Production OTP Verification */}
+            {/* STEP 3: SMTP Email OTP Verification & Phone Number */}
             {step === 3 && (
-              <form onSubmit={handleManualFinalSubmit} className="space-y-4 animate-fade-in-up">
+              <form onSubmit={handleManualFinalSubmit} className="space-y-4">
                 <div className="space-y-3.5">
                   
+                  {/* Notice Banner */}
+                  <div className="p-3.5 bg-blue-50 border border-blue-200 text-psg-navy rounded-2xl text-xs font-semibold space-y-1">
+                    <p className="font-extrabold">✉️ Email Verification Required</p>
+                    <p className="text-[11px] text-slate-600">
+                      A 6-digit OTP code has been dispatched to <strong>{formData.email}</strong> via QuickFinder SMTP.
+                    </p>
+                  </div>
+
+                  {/* 6-Digit Email OTP */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-xs font-extrabold uppercase tracking-wider text-psg-navy">
+                        Enter 6-Digit Email OTP Code *
+                      </label>
+                      <button
+                        type="button"
+                        onClick={handleSendEmailOtp}
+                        disabled={emailOtpLoading}
+                        className="text-xs text-psg-blue font-bold hover:underline disabled:opacity-50"
+                      >
+                        {emailOtpLoading ? 'Sending...' : 'Resend Email OTP'}
+                      </button>
+                    </div>
+
+                    <div className="relative">
+                      <input
+                        type="text"
+                        maxLength={6}
+                        required
+                        value={emailOtpCode}
+                        onChange={(e) => setEmailOtpCode(e.target.value.replace(/[^0-9]/g, ''))}
+                        placeholder="123456"
+                        className="w-full text-center text-2xl font-mono tracking-[0.5em] py-3 px-4 rounded-xl border border-slate-300 focus:border-psg-blue outline-none bg-white font-extrabold text-slate-900"
+                      />
+                    </div>
+                  </div>
+
                   {/* Mobile Phone Number */}
                   <div>
                     <label className="block text-xs font-extrabold uppercase tracking-wider text-psg-navy mb-1.5">
                       Mobile Phone Number *
                     </label>
-                    <div className="relative flex gap-2">
-                      <div className="relative flex-1">
-                        <input
-                          type="tel"
-                          name="phone"
-                          required
-                          disabled={otpSent || otpVerified}
-                          value={formData.phone}
-                          onChange={handleChange}
-                          placeholder="9876543210"
-                          className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 text-sm focus:border-psg-blue focus:ring-2 focus:ring-psg-blue/20 outline-none transition disabled:bg-slate-100 font-medium text-slate-800"
-                        />
-                        <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                      </div>
-                      {!otpVerified && !otpSent && (
-                        <button
-                          type="button"
-                          onClick={handleSendOtp}
-                          disabled={otpLoading}
-                          className="px-4 py-3 bg-psg-navy hover:bg-slate-900 text-white font-extrabold text-xs rounded-xl transition flex items-center gap-1.5 disabled:opacity-60 flex-shrink-0 shadow"
-                        >
-                          {otpLoading ? (
-                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                          ) : (
-                            <span>SEND OTP</span>
-                          )}
-                        </button>
-                      )}
-                      {otpSent && !otpVerified && (
-                        <button
-                          type="button"
-                          onClick={() => { setOtpSent(false); setOtpCode(''); }}
-                          className="px-3 py-3 border border-slate-300 hover:bg-slate-50 text-slate-600 font-bold text-xs rounded-xl transition flex-shrink-0"
-                        >
-                          Change
-                        </button>
-                      )}
+                    <div className="relative">
+                      <input
+                        type="tel"
+                        name="phone"
+                        required
+                        value={formData.phone}
+                        onChange={handleChange}
+                        placeholder="9876543210"
+                        className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 text-sm focus:border-psg-blue outline-none"
+                      />
+                      <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                     </div>
                   </div>
 
-                  {/* 4-Digit OTP Text Input Field */}
-                  {otpSent && !otpVerified && (
-                    <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3 animate-fade-in-up">
-                      <div className="flex items-center justify-between">
-                        <label className="block text-xs font-extrabold uppercase tracking-wider text-psg-navy">
-                          Enter 4-Digit OTP Code *
-                        </label>
-                        <button
-                          type="button"
-                          onClick={handleSendOtp}
-                          disabled={otpLoading || verifyingOtp}
-                          className="text-xs font-bold text-psg-blue hover:underline disabled:opacity-50"
-                        >
-                          {otpLoading ? 'Sending...' : 'Resend OTP'}
-                        </button>
-                      </div>
-                      
-                      <div className="relative">
-                        <input
-                          type="text"
-                          name="otpCode"
-                          maxLength={4}
-                          pattern="[0-9]*"
-                          value={otpCode}
-                          onChange={(e) => setOtpCode(e.target.value.replace(/[^0-9]/g, ''))}
-                          placeholder="1234"
-                          className="w-full text-center text-xl font-mono tracking-[0.4em] py-3 pl-10 pr-4 rounded-xl border border-slate-300 focus:border-psg-blue focus:ring-2 focus:ring-psg-blue/20 outline-none transition bg-white font-extrabold text-slate-800"
-                        />
-                        <KeyRound className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={handleVerifyOtp}
-                        disabled={verifyingOtp || otpCode.length !== 4}
-                        className="w-full py-3 px-4 rounded-xl bg-psg-navy hover:bg-slate-900 text-white font-extrabold text-xs shadow transition flex items-center justify-center gap-2 disabled:opacity-50"
-                      >
-                        {verifyingOtp ? (
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        ) : (
-                          <>
-                            <span>VERIFY OTP</span>
-                            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Profile Photo (Optional) */}
+                  {/* Optional Profile Photo */}
                   <div>
                     <label className="block text-xs font-extrabold uppercase tracking-wider text-psg-navy mb-1.5">
                       Profile Photo (Optional)
@@ -996,62 +623,31 @@ export default function RegisterPage() {
                       className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-psg-navy file:text-white hover:file:bg-slate-900 cursor-pointer"
                     />
                   </div>
-
-                  {/* Verification Status Banner */}
-                  {otpNotice && (
-                    <div className={`p-3 border rounded-2xl text-xs font-bold flex items-center justify-between shadow-sm animate-scale-up ${otpVerified ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-blue-50 border-blue-200 text-psg-navy'}`}>
-                      <div className="flex items-center gap-2">
-                        <CheckCircle2 className={`w-4 h-4 flex-shrink-0 ${otpVerified ? 'text-emerald-600' : 'text-psg-blue'}`} />
-                        <span>{otpNotice}</span>
-                      </div>
-                    </div>
-                  )}
-
                 </div>
 
-                {/* Action Buttons */}
                 <div className="flex items-center gap-3 pt-2">
                   <button
                     type="button"
                     onClick={() => setStep(2)}
-                    className="px-5 py-3 rounded-2xl border border-slate-300 text-slate-700 font-bold text-xs sm:text-sm hover:bg-slate-50 transition flex items-center gap-1.5"
+                    className="px-5 py-3 rounded-2xl border border-slate-300 text-slate-700 font-bold text-xs hover:bg-slate-50 transition"
                   >
-                    <ArrowLeft className="w-4 h-4" />
-                    <span>Back</span>
+                    Back
                   </button>
 
-                  {!otpVerified ? (
-                    <button
-                      type="button"
-                      onClick={otpSent ? handleVerifyOtp : handleSendOtp}
-                      disabled={otpLoading || (otpSent && otpCode.length !== 4)}
-                      className="flex-1 py-3.5 px-4 rounded-2xl bg-psg-navy hover:bg-slate-900 text-white font-extrabold text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-2 transform hover:-translate-y-0.5 disabled:opacity-60"
-                    >
-                      {otpLoading || verifyingOtp ? (
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      ) : (
-                        <>
-                          <span>{otpSent ? 'VERIFY OTP CODE' : 'SEND OTP VIA CALL'}</span>
-                          <ArrowRight className="w-4 h-4 text-psg-gold" />
-                        </>
-                      )}
-                    </button>
-                  ) : (
-                    <button
-                      type="submit"
-                      disabled={loading}
-                      className="flex-1 py-3.5 px-4 rounded-2xl bg-psg-blue hover:bg-psg-royal text-white font-extrabold text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-60 transform hover:-translate-y-0.5"
-                    >
-                      {loading ? (
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      ) : (
-                        <>
-                          <span>CREATE ACCOUNT</span>
-                          <ArrowRight className="w-4 h-4 text-psg-gold" />
-                        </>
-                      )}
-                    </button>
-                  )}
+                  <button
+                    type="submit"
+                    disabled={loading || emailOtpCode.length !== 6}
+                    className="flex-1 py-3.5 px-4 rounded-2xl bg-psg-navy hover:bg-psg-royal text-white font-extrabold text-xs sm:text-sm shadow-md transition flex items-center justify-center gap-2 disabled:opacity-60"
+                  >
+                    {loading ? (
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <span>VERIFY OTP & CREATE ACCOUNT</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </>
+                    )}
+                  </button>
                 </div>
               </form>
             )}
@@ -1074,7 +670,7 @@ export default function RegisterPage() {
               type="button"
               onClick={handleGoogleRegister}
               disabled={googleLoading || loading}
-              className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-2xl bg-white hover:bg-slate-50 text-slate-700 font-bold text-sm border border-slate-300 shadow-sm transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-2xl bg-white hover:bg-slate-50 text-slate-700 font-bold text-sm border border-slate-300 shadow-sm transition disabled:opacity-60"
             >
               {googleLoading ? (
                 <div className="w-5 h-5 border-2 border-psg-blue border-t-transparent rounded-full animate-spin" />
@@ -1092,14 +688,11 @@ export default function RegisterPage() {
         <div className="pt-2 text-center border-t border-slate-100">
           <p className="text-xs text-slate-500 font-medium">
             Already have a PSG Quick Finder account?{' '}
-            <Link to="/login" className="font-extrabold text-psg-blue hover:text-psg-navy underline">
+            <Link to="/login" className="font-extrabold text-psg-navy hover:underline">
               Sign In here
             </Link>
           </p>
         </div>
-
-          </>
-        )}
 
       </div>
     </div>

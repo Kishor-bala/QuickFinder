@@ -1,13 +1,14 @@
 const matchRepository = require('../repositories/matchRepository');
 const { NotFoundError } = require('../utils/errors');
 
-exports.getMyMatches = (req, res, next) => {
+exports.getMyMatches = async (req, res, next) => {
   try {
-    const matches = matchRepository.findByUser(req.user.id);
+    const rawMatches = await matchRepository.findByUser(req.user.id);
+    const matches = Array.isArray(rawMatches) ? rawMatches : [];
     const parsedMatches = matches.map(m => {
       let reasons = [];
       try {
-        reasons = JSON.parse(m.match_reasons || '[]');
+        reasons = typeof m.match_reasons === 'string' ? JSON.parse(m.match_reasons || '[]') : (m.match_reasons || []);
       } catch {
         reasons = [m.match_reasons];
       }
@@ -19,15 +20,15 @@ exports.getMyMatches = (req, res, next) => {
   }
 };
 
-exports.getMatchById = (req, res, next) => {
+exports.getMatchById = async (req, res, next) => {
   try {
-    const match = matchRepository.findById(req.params.id);
+    const match = await matchRepository.findById(req.params.id);
     if (!match) {
       throw new NotFoundError('Match record not found.');
     }
     let reasons = [];
     try {
-      reasons = JSON.parse(match.match_reasons || '[]');
+      reasons = typeof match.match_reasons === 'string' ? JSON.parse(match.match_reasons || '[]') : (match.match_reasons || []);
     } catch {
       reasons = [match.match_reasons];
     }
@@ -37,9 +38,9 @@ exports.getMatchById = (req, res, next) => {
   }
 };
 
-exports.dismissMatch = (req, res, next) => {
+exports.dismissMatch = async (req, res, next) => {
   try {
-    matchRepository.dismissMatch(req.params.id);
+    await matchRepository.dismissMatch(req.params.id);
     res.status(200).json({ message: 'Match dismissed.' });
   } catch (err) {
     next(err);

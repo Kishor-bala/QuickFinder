@@ -18,7 +18,7 @@ export default function QRCodeModal({ title, referenceId, onClose }) {
           <X className="w-4 h-4" />
         </button>
 
-        <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-psg-navy text-psg-gold shadow-md">
+        <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-psg-navy text-white shadow-md">
           <QrCode className="w-6 h-6" />
         </div>
 

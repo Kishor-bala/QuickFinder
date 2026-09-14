@@ -1,88 +1,141 @@
 /**
  * AI & Embedding Provider Abstraction
- * Supports Google Gemini API for semantic extraction & embeddings,
- * with graceful deterministic fallback if API keys are missing or unavailable.
+ * Powered by Groq API (groq/compound-mini) for ultra-fast natural text extraction & enhancement,
+ * with deterministic fallback if API is unreachable.
  */
-const config = require('./index');
 
 class AIProvider {
   constructor() {
-    this.apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY || '';
+    this.groqApiKey = process.env.GROQ_API_KEY || '';
   }
 
   /**
-   * Extract structured item attributes from natural text using Gemini / AI
-   * Example: "lost black milton water bottle near cse lab yesterday"
+   * Extract structured item attributes from natural text using Groq AI
+   * Example input: "I lost my black Apple iPhone 14 Pro near CSE block canteen around 2 PM yesterday"
    */
   async extractReportAttributes(text) {
-    if (!this.apiKey) {
+    const key = process.env.GROQ_API_KEY || this.groqApiKey;
+    if (!key) {
       return this.fallbackExtract(text);
     }
 
     try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${this.apiKey}`, {
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Authorization': `Bearer ${key}`,
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: `Extract structured item details from this lost/found report text. Return ONLY a valid JSON object with keys: category, color, brand, location, building, date. Text: "${text}"`
-            }]
-          }]
+          model: 'groq/compound-mini',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are an AI assistant for a college campus lost & found platform. Respond ONLY with a valid JSON object with keys: item_name, category, brand, model, colour, building, lost_location, description.'
+            },
+            {
+              role: 'user',
+              content: `Extract structured item details from this report text: "${text}"`
+            }
+          ],
+          temperature: 0.1,
+          response_format: { type: 'json_object' }
         })
       });
 
-      if (!response.ok) throw new Error(`Gemini API HTTP ${response.status}`);
+      if (!response.ok) {
+        throw new Error(`Groq API HTTP ${response.status}`);
+      }
+
       const data = await response.json();
-      const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-      const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-      return JSON.parse(cleanJson);
+      const rawContent = data.choices?.[0]?.message?.content || '{}';
+      const parsed = JSON.parse(rawContent);
+
+      return {
+        item_name: parsed.item_name || '',
+        category: this.normalizeCategory(parsed.category),
+        brand: parsed.brand || '',
+        model: parsed.model || '',
+        colour: parsed.colour || parsed.color || '',
+        building: parsed.building || '',
+        lost_location: parsed.lost_location || parsed.location || text,
+        description: parsed.description || text
+      };
     } catch (err) {
-      console.warn('[AIProvider] Gemini extraction fallback:', err.message);
+      console.warn('[AIProvider] Groq extraction fallback:', err.message);
       return this.fallbackExtract(text);
     }
+  }
+
+  normalizeCategory(cat = '') {
+    const lower = cat.toLowerCase();
+    if (lower.includes('phone') || lower.includes('mobile')) return 'Mobile';
+    if (lower.includes('laptop') || lower.includes('computer')) return 'Laptop';
+    if (lower.includes('wallet') || lower.includes('purse')) return 'Wallet';
+    if (lower.includes('id') || lower.includes('card')) return 'ID Card';
+    if (lower.includes('key')) return 'Keys';
+    if (lower.includes('bag') || lower.includes('backpack')) return 'Bag';
+    if (lower.includes('book') || lower.includes('stationery')) return 'Books & Stationery';
+    if (lower.includes('electronic') || lower.includes('gadget')) return 'Electronics';
+    if (lower.includes('bottle') || lower.includes('flask')) return 'Water Bottles & Containers';
+    if (lower.includes('watch') || lower.includes('accessory')) return 'Accessories';
+    return 'Other';
   }
 
   fallbackExtract(text) {
     const lower = (text || '').toLowerCase();
-    const categories = ['Electronics', 'Books & Stationery', 'ID Cards & Wallets', 'Keys', 'Clothing & Accessories', 'Bags & Backpacks', 'Water Bottles & Containers', 'Sports Gear', 'Others'];
+    const categories = ['Mobile', 'Laptop', 'Wallet', 'ID Card', 'Keys', 'Bag', 'Books & Stationery', 'Electronics', 'Accessories', 'Water Bottles & Containers', 'Other'];
     const colors = ['black', 'blue', 'red', 'white', 'silver', 'grey', 'green', 'yellow', 'brown', 'pink'];
 
-    const foundCategory = categories.find(c => lower.includes(c.toLowerCase().split(' ')[0])) || 'Others';
+    const foundCategory = categories.find(c => lower.includes(c.toLowerCase().split(' ')[0])) || 'Other';
     const foundColor = colors.find(c => lower.includes(c)) || '';
     const foundBrand = ['apple', 'samsung', 'hp', 'dell', 'lenovo', 'milton', 'nike', 'adidas', 'fastrack', 'casio'].find(b => lower.includes(b)) || '';
 
     return {
+      item_name: foundBrand ? `${foundBrand.toUpperCase()} Item` : 'Lost Item',
       category: foundCategory,
-      color: foundColor,
+      colour: foundColor,
       brand: foundBrand ? foundBrand.charAt(0).toUpperCase() + foundBrand.slice(1) : '',
-      location: text,
-      building: '',
-      date: new Date().toISOString().split('T')[0]
+      model: '',
+      lost_location: text,
+      building: 'Main Block',
+      description: text
     };
   }
 
   /**
-   * Enhance description for user approval
+   * Enhance description for campus clarity using Groq AI
    */
   async enhanceDescription(text) {
-    if (!this.apiKey) return text;
+    const key = process.env.GROQ_API_KEY || this.groqApiKey;
+    if (!key) return text;
+
     try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${this.apiKey}`, {
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Authorization': `Bearer ${key}`,
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: `Refine and format this lost & found item description for campus clarity. Keep it concise, polite, and factual without adding unverified details. Text: "${text}"`
-            }]
-          }]
+          model: 'groq/compound-mini',
+          messages: [
+            {
+              role: 'system',
+              content: 'Refine and format this lost & found item description for campus clarity. Keep it concise, polite, and factual without adding unverified details.'
+            },
+            {
+              role: 'user',
+              content: text
+            }
+          ],
+          temperature: 0.2
         })
       });
 
       if (!response.ok) return text;
       const data = await response.json();
-      return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || text;
+      return data.choices?.[0]?.message?.content?.trim() || text;
     } catch {
       return text;
     }
@@ -91,7 +144,7 @@ class AIProvider {
 
 class EmbeddingProvider {
   /**
-   * Calculate Jaccard / Cosine similarity between two text strings
+   * Calculate Jaccard similarity between two text strings
    */
   calculateSimilarity(textA = '', textB = '') {
     if (!textA || !textB) return 0;

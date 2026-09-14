@@ -63,14 +63,17 @@ export default function UploadFoundPage() {
       const ext = res.data.extracted || {};
       setFormData(prev => ({
         ...prev,
+        item_name: ext.item_name || prev.item_name,
         category: ext.category || prev.category,
-        colour: ext.color || prev.colour,
         brand: ext.brand || prev.brand,
-        found_location: ext.location || prev.found_location,
+        model: ext.model || prev.model,
+        colour: ext.colour || ext.color || prev.colour,
+        found_location: ext.lost_location || ext.location || prev.found_location,
         building: ext.building || prev.building,
-        description: aiText
+        description: ext.description || aiText
       }));
-    } catch {
+    } catch (err) {
+      console.error('AI extraction error:', err);
       setFormData(prev => ({ ...prev, description: aiText }));
     } finally {
       setAiLoading(false);

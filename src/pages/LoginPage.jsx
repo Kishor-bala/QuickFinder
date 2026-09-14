@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Eye, EyeOff, AlertCircle, ArrowRight, CheckCircle, Mail } from 'lucide-react';
+import { Eye, EyeOff, AlertCircle, ArrowRight, CheckCircle, Mail, KeyRound, ShieldCheck } from 'lucide-react';
 import {
   GoogleAuthProvider,
   signInWithPopup,
-  sendPasswordResetEmail,
 } from 'firebase/auth';
 import { firebaseAuth } from '../services/firebase';
 import { useAuth } from '../context/AuthContext';
@@ -26,10 +25,17 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // OTP Verification State
+  const [requireOtp, setRequireOtp] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [otpMessage, setOtpMessage] = useState('');
+
   const [forgotModal, setForgotModal] = useState(false);
   const [forgotSuccess, setForgotSuccess] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotLoading, setForgotLoading] = useState(false);
+  const [resetLink, setResetLink] = useState('');
 
   const { login, loginWithFirebase } = useAuth();
   const navigate = useNavigate();
@@ -54,13 +60,10 @@ export default function LoginPage() {
     if (code.includes('network-request-failed')) {
       return 'Network error. Check your internet connection.';
     }
-    if (err.response?.status === 502 || (err.message && err.message.includes('502'))) {
-      return 'Backend server is temporarily starting up. Please click again in a few seconds.';
-    }
     return err.response?.data?.message || err.message || 'Authentication failed. Please try again.';
   };
 
-  // Default Primary Action: Google Sign-In via Firebase popup
+  // Google Sign-In via Firebase popup
   const handleGoogleLogin = async () => {
     setError('');
     setGoogleLoading(true);
@@ -83,7 +86,7 @@ export default function LoginPage() {
     }
   };
 
-  // Secondary Option: Email + Password login (uses backend /auth/login directly)
+  // Email + Password login with 2FA SMTP OTP support
   const handleEmailLogin = async (e) => {
     e.preventDefault();
     setError('');
@@ -92,26 +95,20 @@ export default function LoginPage() {
 
     setLoading(true);
     try {
-      await login(email.trim(), password);
+      const res = await login(email.trim(), password, requireOtp ? otpCode : null);
+      if (res?.requireOtp) {
+        setRequireOtp(true);
+        setOtpMessage(res.message || 'A 6-digit OTP code has been dispatched to your email address from QuickFinder via SMTP.');
+        return;
+      }
       navigate(redirectPath, { replace: true });
     } catch (err) {
       console.error('Email login error:', err);
-      const code = err.code || '';
-      if (code.includes('too-many-requests')) {
-        setError('Too many failed attempts. Please wait a moment and try again.');
-      } else if (err.response?.status === 401 || err.response?.status === 403) {
-        setError('Incorrect email or password. Please try again.');
-      } else if (err.response?.status === 502 || (err.message && err.message.includes('502'))) {
-        setError('Backend server is temporarily starting up. Please click Sign In again in a few seconds.');
-      } else {
-        setError(err.response?.data?.message || err.message || 'Login failed. Please try again.');
-      }
+      setError(err.response?.data?.message || err.message || 'Login failed. Please check your credentials.');
     } finally {
       setLoading(false);
     }
   };
-
-  const [resetLink, setResetLink] = useState('');
 
   // Password reset via API & Firebase Admin SDK
   const handleForgotPassword = async (e) => {
@@ -171,11 +168,12 @@ export default function LoginPage() {
               <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="email"
+                disabled={requireOtp}
                 autoComplete="email"
                 value={email}
                 onChange={(e) => { setEmail(e.target.value); setError(''); }}
                 placeholder="student@psgcas.ac.in"
-                className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 text-sm focus:border-psg-blue focus:ring-2 focus:ring-psg-blue/20 outline-none transition"
+                className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 text-sm focus:border-psg-blue outline-none disabled:bg-slate-100 font-medium text-slate-800"
               />
             </div>
           </div>
@@ -185,22 +183,25 @@ export default function LoginPage() {
               <label className="block text-xs font-extrabold uppercase tracking-wider text-psg-navy">
                 Password
               </label>
-              <button
-                type="button"
-                onClick={() => setForgotModal(true)}
-                className="text-xs text-psg-blue hover:text-psg-royal font-bold"
-              >
-                Forgot Password?
-              </button>
+              {!requireOtp && (
+                <button
+                  type="button"
+                  onClick={() => setForgotModal(true)}
+                  className="text-xs text-psg-navy hover:underline font-bold"
+                >
+                  Forgot Password?
+                </button>
+              )}
             </div>
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
+                disabled={requireOtp}
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => { setPassword(e.target.value); setError(''); }}
                 placeholder="Enter password"
-                className="w-full px-4 py-3 rounded-xl border border-slate-300 text-sm focus:border-psg-blue focus:ring-2 focus:ring-psg-blue/20 outline-none transition pr-10"
+                className="w-full px-4 py-3 rounded-xl border border-slate-300 text-sm focus:border-psg-blue outline-none pr-10 disabled:bg-slate-100"
               />
               <button
                 type="button"
@@ -212,16 +213,50 @@ export default function LoginPage() {
             </div>
           </div>
 
+          {/* 6-Digit SMTP Email OTP Field (Appears when 2FA is triggered) */}
+          {requireOtp && (
+            <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3 animate-fade-in-up">
+              <div className="flex items-center gap-2 text-psg-navy font-bold text-xs">
+                <ShieldCheck className="w-4 h-4 text-psg-navy" />
+                <span>SMTP Email 2FA OTP Required</span>
+              </div>
+              <p className="text-xs text-slate-600">{otpMessage}</p>
+
+              <div>
+                <label className="block text-xs font-extrabold uppercase tracking-wider text-psg-navy mb-1.5">
+                  Enter 6-Digit OTP *
+                </label>
+                <input
+                  type="text"
+                  maxLength={6}
+                  required
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value.replace(/[^0-9]/g, ''))}
+                  placeholder="123456"
+                  className="w-full text-center text-2xl font-mono tracking-[0.5em] py-3 px-4 rounded-xl border border-slate-300 focus:border-psg-blue outline-none bg-white font-extrabold text-slate-900"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={() => { setRequireOtp(false); setOtpCode(''); }}
+                className="text-xs text-slate-500 font-bold hover:underline"
+              >
+                ← Back to normal sign in
+              </button>
+            </div>
+          )}
+
           <button
             type="submit"
-            disabled={loading || googleLoading}
-            className="w-full py-3.5 px-4 rounded-2xl bg-psg-blue hover:bg-psg-royal text-white font-extrabold text-sm shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+            disabled={loading || googleLoading || (requireOtp && otpCode.length !== 6)}
+            className="w-full py-3.5 px-4 rounded-2xl bg-psg-navy hover:bg-psg-dark text-white font-extrabold text-sm shadow-lg shadow-psg-navy/20 transition-all flex items-center justify-center gap-2 disabled:opacity-60 transform hover:-translate-y-0.5"
           >
             {loading ? (
               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
             ) : (
               <>
-                <span>SIGN IN WITH EMAIL</span>
+                <span>{requireOtp ? 'VERIFY OTP & SIGN IN' : 'SIGN IN WITH EMAIL'}</span>
                 <ArrowRight className="w-4 h-4" />
               </>
             )}
@@ -229,30 +264,34 @@ export default function LoginPage() {
         </form>
 
         {/* Divider */}
-        <div className="flex items-center gap-3 pt-1">
-          <div className="flex-1 h-px bg-slate-200" />
-          <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">or</span>
-          <div className="flex-1 h-px bg-slate-200" />
-        </div>
+        {!requireOtp && (
+          <div className="flex items-center gap-3 pt-1">
+            <div className="flex-1 h-px bg-slate-200" />
+            <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">or</span>
+            <div className="flex-1 h-px bg-slate-200" />
+          </div>
+        )}
 
-        {/* Google Sign-In Option (Clean Normal Theme) */}
-        <div>
-          <button
-            type="button"
-            onClick={handleGoogleLogin}
-            disabled={googleLoading || loading}
-            className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-2xl bg-white hover:bg-slate-50 text-slate-700 font-bold text-sm border border-slate-300 shadow-sm transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {googleLoading ? (
-              <div className="w-5 h-5 border-2 border-psg-blue border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <GoogleIcon />
-            )}
-            <span>
-              {googleLoading ? 'Signing in with Google...' : 'Continue with Google'}
-            </span>
-          </button>
-        </div>
+        {/* Google Sign-In Option */}
+        {!requireOtp && (
+          <div>
+            <button
+              type="button"
+              onClick={handleGoogleLogin}
+              disabled={googleLoading || loading}
+              className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-2xl bg-white hover:bg-slate-50 text-slate-700 font-bold text-sm border border-slate-300 shadow-sm transition disabled:opacity-60"
+            >
+              {googleLoading ? (
+                <div className="w-5 h-5 border-2 border-psg-blue border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <GoogleIcon />
+              )}
+              <span>
+                {googleLoading ? 'Signing in with Google...' : 'Continue with Google'}
+              </span>
+            </button>
+          </div>
+        )}
 
         {/* Link to Register */}
         <div className="pt-2 text-center border-t border-slate-100">
@@ -268,7 +307,7 @@ export default function LoginPage() {
 
       {/* Forgot Password Modal */}
       {forgotModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-psg-navy/70 backdrop-blur-sm animate-fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-psg-navy/70 backdrop-blur-sm">
           <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-slate-100 space-y-4">
             <h3 className="font-extrabold text-psg-navy text-base">Reset Account Password</h3>
             {forgotSuccess ? (
@@ -278,13 +317,13 @@ export default function LoginPage() {
                   If <strong>{forgotEmail}</strong> is registered, password reset instructions have been generated.
                 </p>
                 {resetLink && (
-                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-2xl space-y-2 text-center animate-fade-in-up">
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-2xl space-y-2 text-center">
                     <p className="text-xs font-extrabold text-psg-navy">Direct Password Reset Link:</p>
                     <a
                       href={resetLink}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-psg-blue hover:bg-psg-royal text-white text-xs font-black rounded-xl shadow-md transition transform hover:-translate-y-0.5"
+                      className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-psg-navy hover:bg-slate-900 text-white text-xs font-black rounded-xl shadow-md transition"
                     >
                       <span>CLICK TO RESET PASSWORD</span>
                       <ArrowRight className="w-3.5 h-3.5" />
@@ -308,7 +347,7 @@ export default function LoginPage() {
                   required
                   value={forgotEmail}
                   onChange={(e) => setForgotEmail(e.target.value)}
-                  placeholder="name@psgtech.ac.in"
+                  placeholder="name@psgcas.ac.in"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs focus:border-psg-blue outline-none"
                 />
                 <div className="flex justify-end gap-2 pt-2">

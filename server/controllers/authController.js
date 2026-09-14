@@ -19,17 +19,51 @@ exports.register = async (req, res, next) => {
 
 exports.login = async (req, res, next) => {
   try {
-    const { identifier, password } = req.body;
-    const { user, token } = await authService.login(identifier, password);
+    const { identifier, password, otpCode } = req.body;
+    const result = await authService.login(identifier, password, otpCode);
+    if (result.requireOtp) {
+      return res.status(200).json({
+        success: true,
+        requireOtp: true,
+        email: result.email,
+        message: result.message,
+      });
+    }
     res.status(200).json({
       message: 'Login successful.',
-      user,
-      token,
+      user: result.user,
+      token: result.token,
     });
   } catch (err) {
     next(err);
   }
 };
+
+exports.sendEmailOtp = async (req, res, next) => {
+  try {
+    const { email, name } = req.body;
+    const emailService = require('../services/emailService');
+    const result = await emailService.sendVerificationOtp(email, name);
+    res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.verifyEmailOtp = async (req, res, next) => {
+  try {
+    const { email, otpCode } = req.body;
+    const emailService = require('../services/emailService');
+    const result = await emailService.verifyEmailOtp(email, otpCode);
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+};
+
 
 exports.getMe = async (req, res, next) => {
   try {
@@ -45,10 +79,18 @@ exports.updateProfile = async (req, res, next) => {
     const profilePhoto = req.file
       ? `data:${req.file.mimetype || 'image/jpeg'};base64,${req.file.buffer.toString('base64')}`
       : null;
-    const user = await authService.updateProfile(req.user.id, req.body, profilePhoto);
+    const result = await authService.updateProfile(req.user.id, req.body, profilePhoto);
+    if (result && result.requireOtp) {
+      return res.status(200).json({
+        success: true,
+        requireOtp: true,
+        email: result.email,
+        message: result.message,
+      });
+    }
     res.status(200).json({
       message: 'Profile updated successfully.',
-      user,
+      user: result,
     });
   } catch (err) {
     next(err);

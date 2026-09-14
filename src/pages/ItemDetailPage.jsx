@@ -96,8 +96,8 @@ export default function ItemDetailPage() {
                 item.status === 'Claimed'
                   ? 'bg-emerald-600 text-white'
                   : item.status === 'Claim Requested'
-                  ? 'bg-psg-gold text-psg-navy'
-                  : 'bg-psg-navy/90 text-psg-gold border border-psg-gold/30 backdrop-blur'
+                  ? 'bg-psg-navy text-white border border-white/20'
+                  : 'bg-psg-navy/90 text-white border border-white/20 backdrop-blur'
               }`}>
                 {item.status}
               </span>
@@ -107,7 +107,7 @@ export default function ItemDetailPage() {
             {item.userMatch && (
               <div className="absolute top-4 right-4">
                 <span className="px-3.5 py-1.5 rounded-full text-xs font-black tracking-wide bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg flex items-center gap-1.5">
-                  <Sparkles className="w-4 h-4 text-psg-gold" />
+                  <Sparkles className="w-4 h-4 text-white" />
                   {item.userMatch.match_score}% Match
                 </span>
               </div>
@@ -123,7 +123,7 @@ export default function ItemDetailPage() {
                   onClick={() => setSelectedPhotoIdx(idx)}
                   className={`relative w-20 h-20 rounded-2xl overflow-hidden border-2 flex-shrink-0 transition-all ${
                     selectedPhotoIdx === idx
-                      ? 'border-psg-blue ring-2 ring-psg-blue/30 scale-105'
+                      ? 'border-psg-navy ring-2 ring-psg-navy/30 scale-105'
                       : 'border-slate-200 opacity-70 hover:opacity-100'
                   }`}
                 >
@@ -142,7 +142,7 @@ export default function ItemDetailPage() {
             {/* Header info */}
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <span className="px-3 py-1 rounded-full text-xs font-extrabold uppercase tracking-wider bg-psg-navy text-psg-gold">
+                <span className="px-3 py-1 rounded-full text-xs font-extrabold uppercase tracking-wider bg-psg-navy text-white">
                   {item.category}
                 </span>
                 {item.brand && (
@@ -210,7 +210,7 @@ export default function ItemDetailPage() {
                 <span className="font-extrabold text-psg-navy uppercase tracking-wider text-[10px]">
                   Current Campus Custody:
                 </span>
-                <p className="text-slate-800 bg-amber-50 border border-amber-200 p-3 rounded-xl font-medium">
+                <p className="text-slate-800 bg-slate-100 border border-slate-200 p-3 rounded-xl font-medium">
                   {item.additional_notes}
                 </p>
               </div>
@@ -218,20 +218,20 @@ export default function ItemDetailPage() {
 
             {/* Match Checklist */}
             {item.userMatch && item.userMatch.match_reasons && item.userMatch.match_reasons.length > 0 && (
-              <div className="p-5 rounded-2xl bg-blue-50 border border-psg-blue/30 space-y-3">
+              <div className="p-5 rounded-2xl bg-psg-navy text-white border border-psg-royal/40 space-y-3">
                 <div className="flex items-center justify-between">
-                  <h4 className="font-extrabold text-sm text-psg-navy flex items-center gap-1.5 font-['Outfit']">
-                    <Sparkles className="w-4 h-4 text-psg-gold" />
+                  <h4 className="font-extrabold text-sm text-white flex items-center gap-1.5 font-['Outfit']">
+                    <Sparkles className="w-4 h-4 text-white" />
                     Why we think this matches your report:
                   </h4>
-                  <span className="text-xs font-black text-psg-blue">
+                  <span className="text-xs font-black text-emerald-400">
                     {item.userMatch.match_score}% Confidence
                   </span>
                 </div>
-                <div className="space-y-1.5 text-xs text-psg-navy font-semibold">
+                <div className="space-y-1.5 text-xs text-slate-200 font-semibold">
                   {item.userMatch.match_reasons.map((reason, idx) => (
                     <div key={idx} className="flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-psg-blue flex-shrink-0" />
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
                       <span>{reason}</span>
                     </div>
                   ))}
@@ -242,7 +242,7 @@ export default function ItemDetailPage() {
             {/* Privacy Protection Box */}
             <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
               <div className="flex items-center gap-2 text-psg-navy text-xs font-extrabold">
-                <ShieldCheck className="w-4 h-4 text-psg-blue" />
+                <ShieldCheck className="w-4 h-4 text-psg-navy" />
                 <span>Finder Contact Privacy Protection</span>
               </div>
               {item.canViewContact ? (
@@ -257,13 +257,13 @@ export default function ItemDetailPage() {
                   {item.contact_number && (
                     <p className="flex items-center gap-1.5 text-slate-800 font-semibold">
                       <Phone className="w-3.5 h-3.5 text-slate-400" />
-                      Phone: <a href={`tel:${item.contact_number}`} className="text-psg-blue font-bold hover:underline">{item.contact_number}</a>
+                      Phone: <a href={`tel:${item.contact_number}`} className="text-psg-navy font-bold hover:underline">{item.contact_number}</a>
                     </p>
                   )}
                   {item.contact_email && (
                     <p className="flex items-center gap-1.5 text-slate-800 font-semibold">
                       <Mail className="w-3.5 h-3.5 text-slate-400" />
-                      Email: <a href={`mailto:${item.contact_email}`} className="text-psg-blue font-bold hover:underline">{item.contact_email}</a>
+                      Email: <a href={`mailto:${item.contact_email}`} className="text-psg-navy font-bold hover:underline">{item.contact_email}</a>
                     </p>
                   )}
                 </div>
@@ -283,7 +283,7 @@ export default function ItemDetailPage() {
                       ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
                       : item.userClaim.status === 'Rejected'
                       ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                      : 'bg-amber-50 text-amber-800 border border-amber-200'
+                      : 'bg-slate-100 text-slate-800 border border-slate-300'
                   }`}>
                     {item.userClaim.status === 'Accepted' && '🎉 Your ownership claim was accepted by the finder!'}
                     {item.userClaim.status === 'Pending' && '⏳ Claim request pending review by the finder.'}
@@ -302,9 +302,9 @@ export default function ItemDetailPage() {
                         setClaimModalOpen(true);
                       }
                     }}
-                    className="w-full py-4 px-6 rounded-2xl bg-psg-navy hover:bg-slate-900 text-white font-extrabold text-sm border-2 border-psg-gold shadow-xl flex items-center justify-center gap-2 transition-all transform hover:-translate-y-0.5"
+                    className="w-full py-4 px-6 rounded-2xl bg-psg-navy hover:bg-psg-royal text-white font-extrabold text-sm border border-white/20 shadow-xl flex items-center justify-center gap-2 transition-all transform hover:-translate-y-0.5"
                   >
-                    <ShieldCheck className="w-5 h-5 text-psg-gold" />
+                    <ShieldCheck className="w-5 h-5 text-white" />
                     <span>REQUEST TO CLAIM THIS ITEM</span>
                   </button>
                 )}

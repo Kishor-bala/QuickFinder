@@ -3,10 +3,12 @@ import { Link, useNavigate } from 'react-router-dom';
 import { FolderHeart, Search, Upload, PlusCircle, CheckCircle, XCircle, AlertCircle, Sparkles, MapPin, Calendar, Check, X, ShieldAlert } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import PsgLogo from '../components/PsgLogo';
 
 export default function MyItemsPage() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState('lost');
@@ -29,6 +31,7 @@ export default function MyItemsPage() {
       setClaimsReceived(claimsRes.data.claims || []);
     } catch (err) {
       console.error('Failed to load user items:', err);
+      toast.error('Failed to load user listings');
     } finally {
       setLoading(false);
     }
@@ -42,10 +45,11 @@ export default function MyItemsPage() {
     setActionLoading(claimId);
     try {
       await api.put(`/claims/${claimId}/respond`, { action });
+      toast.success(`Claim ${action === 'accept' ? 'accepted' : 'rejected'} successfully.`);
       await fetchData();
     } catch (err) {
       console.error('Failed to respond to claim:', err);
-      alert(err.response?.data?.message || 'Action failed.');
+      toast.error(err.response?.data?.message || 'Action failed.');
     } finally {
       setActionLoading(null);
     }
@@ -89,14 +93,14 @@ export default function MyItemsPage() {
         <div className="flex items-center gap-3">
           <Link
             to="/report-lost"
-            className="px-4 py-2.5 rounded-xl bg-psg-navy text-white hover:bg-slate-900 text-xs font-extrabold flex items-center gap-1.5 transition shadow"
+            className="px-4 py-2.5 rounded-xl bg-psg-navy text-white hover:bg-psg-royal text-xs font-extrabold flex items-center gap-1.5 transition shadow"
           >
-            <PlusCircle className="w-4 h-4 text-psg-gold" />
+            <PlusCircle className="w-4 h-4 text-white" />
             <span>Report Lost Item</span>
           </Link>
           <Link
             to="/upload"
-            className="px-4 py-2.5 rounded-xl bg-psg-blue text-white hover:bg-psg-royal text-xs font-extrabold flex items-center gap-1.5 transition shadow"
+            className="px-4 py-2.5 rounded-xl bg-psg-navy text-white hover:bg-psg-royal text-xs font-extrabold flex items-center gap-1.5 transition shadow border border-white/20"
           >
             <Upload className="w-4 h-4" />
             <span>Upload Found Item</span>
@@ -110,7 +114,7 @@ export default function MyItemsPage() {
           onClick={() => setActiveTab('lost')}
           className={`pb-3 text-sm font-extrabold flex items-center gap-2 border-b-2 transition-all ${
             activeTab === 'lost'
-              ? 'border-psg-blue text-psg-blue'
+              ? 'border-psg-navy text-psg-navy'
               : 'border-transparent text-slate-500 hover:text-psg-navy'
           }`}
         >
@@ -125,7 +129,7 @@ export default function MyItemsPage() {
           onClick={() => setActiveTab('found')}
           className={`pb-3 text-sm font-extrabold flex items-center gap-2 border-b-2 transition-all ${
             activeTab === 'found'
-              ? 'border-psg-blue text-psg-blue'
+              ? 'border-psg-navy text-psg-navy'
               : 'border-transparent text-slate-500 hover:text-psg-navy'
           }`}
         >
@@ -135,7 +139,7 @@ export default function MyItemsPage() {
             {foundItems.length}
           </span>
           {claimsReceived.filter(c => c.status === 'Pending').length > 0 && (
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-psg-gold text-psg-navy animate-pulse">
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-psg-navy text-white animate-pulse">
               {claimsReceived.filter(c => c.status === 'Pending').length} pending claims
             </span>
           )}
@@ -152,7 +156,7 @@ export default function MyItemsPage() {
         /* LOST ITEMS TAB */
         lostItems.length === 0 ? (
           <div className="bg-white rounded-3xl p-12 text-center border border-slate-200 shadow-md max-w-lg mx-auto space-y-4">
-            <div className="w-14 h-14 rounded-2xl bg-psg-navy text-psg-gold flex items-center justify-center mx-auto shadow">
+            <div className="w-14 h-14 rounded-2xl bg-psg-navy text-white flex items-center justify-center mx-auto shadow">
               <Search className="w-7 h-7" />
             </div>
             <div className="space-y-1">
@@ -163,7 +167,7 @@ export default function MyItemsPage() {
             </div>
             <Link
               to="/report-lost"
-              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-psg-blue hover:bg-psg-royal text-white font-extrabold text-xs shadow-md"
+              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-psg-navy hover:bg-psg-royal text-white font-extrabold text-xs shadow-md"
             >
               Report Lost Belonging
             </Link>
@@ -176,7 +180,7 @@ export default function MyItemsPage() {
                 className="bg-white rounded-3xl border border-slate-200 shadow-md p-6 space-y-4 hover:shadow-xl transition-all"
               >
                 <div className="flex items-start justify-between gap-2">
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-psg-navy text-psg-gold">
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-psg-navy text-white">
                     {item.category}
                   </span>
                   {getStatusBadge(item.status)}
@@ -199,7 +203,7 @@ export default function MyItemsPage() {
                       {item.item_name}
                     </h3>
                     <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5 truncate font-medium">
-                      <MapPin className="w-3.5 h-3.5 text-psg-blue flex-shrink-0" />
+                      <MapPin className="w-3.5 h-3.5 text-psg-navy flex-shrink-0" />
                       {item.lost_location}
                     </p>
                     <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5 font-medium">
@@ -210,14 +214,14 @@ export default function MyItemsPage() {
                 </div>
 
                 {item.matchCount > 0 && (
-                  <div className="p-3 bg-blue-50 rounded-2xl border border-psg-blue/30 flex items-center justify-between text-xs font-semibold">
-                    <span className="font-extrabold text-psg-navy flex items-center gap-1">
-                      <Sparkles className="w-4 h-4 text-psg-gold" />
+                  <div className="p-3 bg-psg-navy text-white rounded-2xl border border-psg-royal/40 flex items-center justify-between text-xs font-semibold">
+                    <span className="font-extrabold text-white flex items-center gap-1">
+                      <Sparkles className="w-4 h-4 text-white" />
                       {item.matchCount} Match(es) Found
                     </span>
                     <Link
                       to={`/find?search=${encodeURIComponent(item.item_name)}`}
-                      className="font-bold text-psg-blue hover:underline"
+                      className="font-bold text-white underline hover:text-slate-300"
                     >
                       View Results →
                     </Link>
@@ -228,7 +232,7 @@ export default function MyItemsPage() {
                   <span>Reported {new Date(item.created_at).toLocaleDateString()}</span>
                   <Link
                     to={`/find?search=${encodeURIComponent(item.item_name)}`}
-                    className="font-bold text-psg-blue hover:text-psg-navy"
+                    className="font-bold text-psg-navy hover:text-slate-700"
                   >
                     Check Directory
                   </Link>
@@ -243,9 +247,9 @@ export default function MyItemsPage() {
           
           {/* Claims Inspector */}
           {claimsReceived.length > 0 && (
-            <div className="bg-psg-navy rounded-3xl p-6 sm:p-8 text-white shadow-2xl border border-blue-900/60 space-y-4">
-              <div className="flex items-center gap-2.5 text-psg-gold font-extrabold text-base font-['Outfit']">
-                <ShieldAlert className="w-5 h-5 text-psg-gold" />
+            <div className="bg-psg-navy rounded-3xl p-6 sm:p-8 text-white shadow-2xl border border-white/10 space-y-4">
+              <div className="flex items-center gap-2.5 text-white font-extrabold text-base font-['Outfit']">
+                <ShieldAlert className="w-5 h-5 text-white" />
                 <h3>Claims Received on Items You Found ({claimsReceived.length})</h3>
               </div>
               <p className="text-xs text-slate-300 font-medium">
@@ -270,7 +274,7 @@ export default function MyItemsPage() {
                           ? 'bg-emerald-100 text-emerald-800'
                           : claim.status === 'Rejected'
                           ? 'bg-rose-100 text-rose-800'
-                          : 'bg-psg-gold text-psg-navy'
+                          : 'bg-psg-navy text-white'
                       }`}>
                         {claim.status}
                       </span>
@@ -311,9 +315,9 @@ export default function MyItemsPage() {
                         <button
                           onClick={() => handleClaimResponse(claim.id, 'accept')}
                           disabled={actionLoading === claim.id}
-                          className="flex-1 py-2.5 px-4 rounded-xl bg-psg-blue hover:bg-psg-royal text-white text-xs font-extrabold flex items-center justify-center gap-1.5 shadow-md disabled:opacity-50"
+                          className="flex-1 py-2.5 px-4 rounded-xl bg-psg-navy hover:bg-slate-900 text-white text-xs font-extrabold flex items-center justify-center gap-1.5 shadow-md disabled:opacity-50"
                         >
-                          <Check className="w-4 h-4 text-psg-gold" />
+                          <Check className="w-4 h-4 text-white" />
                           <span>ACCEPT CLAIM</span>
                         </button>
                         <button
@@ -335,7 +339,7 @@ export default function MyItemsPage() {
           {/* Found Items Grid */}
           {foundItems.length === 0 ? (
             <div className="bg-white rounded-3xl p-12 text-center border border-slate-200 shadow-md max-w-lg mx-auto space-y-4">
-              <div className="w-14 h-14 rounded-2xl bg-psg-gold text-psg-navy flex items-center justify-center mx-auto shadow">
+              <div className="w-14 h-14 rounded-2xl bg-psg-navy text-white flex items-center justify-center mx-auto shadow">
                 <Upload className="w-7 h-7" />
               </div>
               <div className="space-y-1">
@@ -346,7 +350,7 @@ export default function MyItemsPage() {
               </div>
               <Link
                 to="/upload"
-                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-psg-navy hover:bg-slate-900 text-white font-extrabold text-xs shadow-md border-2 border-psg-gold"
+                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-psg-navy hover:bg-slate-900 text-white font-extrabold text-xs shadow-md border border-white/20"
               >
                 Upload Found Item
               </Link>
@@ -359,7 +363,7 @@ export default function MyItemsPage() {
                   className="bg-white rounded-3xl border border-slate-200 shadow-md p-6 space-y-4 hover:shadow-xl transition-all"
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-psg-navy text-psg-gold">
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-psg-navy text-white">
                       {item.category}
                     </span>
                     {getStatusBadge(item.status)}

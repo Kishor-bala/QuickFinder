@@ -5,8 +5,20 @@ const userRepository = require('../repositories/userRepository');
 const notificationRepository = require('../repositories/notificationRepository');
 const { BadRequestError, UnauthorizedError, ConflictError, ForbiddenError } = require('../utils/errors');
 const { validateRegistration } = require('../shared');
+const { SUPER_ADMIN_EMAILS } = require('../shared/constants');
 
 class AuthService {
+  async ensureAdminRoleIfNeeded(user) {
+    if (!user || !user.email) return user;
+    const cleanEmail = user.email.toLowerCase().trim();
+    const isSuperAdminEmail = SUPER_ADMIN_EMAILS.map((e) => e.toLowerCase().trim()).includes(cleanEmail);
+    if (isSuperAdminEmail && user.role !== 'admin') {
+      console.log(`[Auth] Auto-promoting super admin email ${cleanEmail} to role 'admin'`);
+      user = await userRepository.updateRole(user.id, 'admin');
+    }
+    return user;
+  }
+
   generateToken(user) {
     return jwt.sign(
       { id: user.id, role: user.role },
@@ -183,6 +195,16 @@ class AuthService {
       }
     }
 
+    // 0. Verify SMTP Email OTP Code
+    if (!data.otpCode) {
+      throw new BadRequestError('Email verification OTP code is required to complete registration.');
+    }
+    const emailService = require('./emailService');
+    const otpRes = await emailService.verifyEmailOtp(data.email, data.otpCode);
+    if (!otpRes.success) {
+      throw new BadRequestError(otpRes.message || 'Invalid or expired OTP code.');
+    }
+
     // 1. Create account in Firebase Auth
     let fbUser = null;
     let emailVerificationLink = null;
@@ -195,7 +217,7 @@ class AuthService {
           email: data.email.toLowerCase().trim(),
           password: data.password,
           displayName: data.name.trim(),
-          emailVerified: false,
+          emailVerified: true,
         });
       } catch (e) {
         if (e.code === 'auth/email-already-exists' || (e.message && e.message.includes('already exists'))) {
@@ -229,14 +251,14 @@ class AuthService {
       profile_photo: profilePhoto,
       role: 'user',
       firebase_uid: fbUser ? fbUser.uid : null,
-      email_verified: fbUser ? (fbUser.emailVerified ? 1 : 0) : 0,
+      email_verified: 1,
     });
 
     // Send welcome notification
     await notificationRepository.create({
       user_id: user.id,
       title: 'Welcome to Quick Finder!',
-      message: 'Your account is ready. Report lost belongings, upload found items, and let our intelligent matching algorithm work for you.',
+      message: 'Your account is ready and verified. Report lost belongings, upload found items, and let our intelligent matching algorithm work for you.',
       type: 'system',
     });
 
@@ -245,7 +267,7 @@ class AuthService {
   }
 
   // --- MANUAL LOGIN ---
-  async login(identifier, password) {
+  async login(identifier, password, otpCode = null) {
     if (!identifier || !password) {
       throw new BadRequestError('Email/User ID and password are required.');
     }
@@ -287,6 +309,24 @@ class AuthService {
       throw new UnauthorizedError('Invalid credentials. Please check your username/email and password.');
     }
 
+    // Require 2FA Email OTP Verification on Login if unverified or required for email/pass login
+    const emailService = require('./emailService');
+    if (otpCode) {
+      const otpRes = await emailService.verifyEmailOtp(user.email, otpCode);
+      if (!otpRes.success) {
+        throw new BadRequestError(otpRes.message || 'Invalid or expired OTP code.');
+      }
+      await userRepository.updateEmailVerified(user.id, true);
+      user.email_verified = 1;
+    } else if (user.email_verified === 0) {
+      await emailService.sendVerificationOtp(user.email, user.name);
+      return {
+        requireOtp: true,
+        email: user.email,
+        message: `A 6-digit verification OTP has been sent to ${user.email}. Enter the code to complete login.`,
+      };
+    }
+
     // Lazy sync: create/link in Firebase Auth if legacy user record lacks firebase_uid
     if (!user.firebase_uid) {
       try {
@@ -301,7 +341,7 @@ class AuthService {
               email: user.email,
               password: password,
               displayName: user.name,
-              emailVerified: false,
+              emailVerified: true,
             });
           }
           if (fbUser) {
@@ -314,6 +354,7 @@ class AuthService {
       }
     }
 
+    user = await this.ensureAdminRoleIfNeeded(user);
     const token = this.generateToken(user);
     const safeUser = await userRepository.findById(user.id);
     return { user: safeUser, token };
@@ -321,7 +362,7 @@ class AuthService {
 
   // --- GET PROFILE (ACTIVE SESSION STATUS CHECK) ---
   async getProfile(userId) {
-    const user = await userRepository.findById(userId);
+    let user = await userRepository.findById(userId);
     if (!user) {
       throw new UnauthorizedError('User not found.');
     }
@@ -349,24 +390,53 @@ class AuthService {
         }
       }
     }
+
+    user = await this.ensureAdminRoleIfNeeded(user);
     return user;
   }
 
-  async updateProfile(userId, { name, phone }, profilePhoto = null) {
+  async updateProfile(userId, { name, phone, otpCode }, profilePhoto = null) {
     if (!name || !phone) {
       throw new BadRequestError('Name and phone number are required.');
     }
 
-    const existingPhone = await userRepository.findByPhone(phone, userId);
-    if (existingPhone) {
-      throw new ConflictError('This phone number is already registered to another account.');
+    const currentUser = await userRepository.findById(userId);
+    if (!currentUser) {
+      throw new UnauthorizedError('User not found.');
     }
 
-    return await userRepository.updateProfile(userId, {
-      name,
-      phone,
+    const cleanPhone = phone.trim();
+    const isPhoneChanged = currentUser.phone && currentUser.phone !== 'Not provided' && currentUser.phone !== cleanPhone;
+
+    if (isPhoneChanged) {
+      const existingPhone = await userRepository.findByPhone(cleanPhone, userId);
+      if (existingPhone) {
+        throw new ConflictError('This phone number is already registered to another account.');
+      }
+
+      const emailService = require('./emailService');
+      if (otpCode) {
+        const otpRes = await emailService.verifyEmailOtp(currentUser.email, otpCode);
+        if (!otpRes.success) {
+          throw new BadRequestError(otpRes.message || 'Invalid or expired OTP verification code.');
+        }
+      } else {
+        await emailService.sendVerificationOtp(currentUser.email, currentUser.name);
+        return {
+          requireOtp: true,
+          email: currentUser.email,
+          message: `To verify your phone number change, a 6-digit OTP code has been sent to ${currentUser.email}.`,
+        };
+      }
+    }
+
+    const updatedUser = await userRepository.updateProfile(userId, {
+      name: name.trim(),
+      phone: cleanPhone,
       profile_photo: profilePhoto,
     });
+
+    return await this.ensureAdminRoleIfNeeded(updatedUser);
   }
 
   async changePassword(userId, currentPassword, newPassword) {
@@ -460,66 +530,72 @@ class AuthService {
       }
     }
 
-    // If active existing user, return token
+    // If active existing user, update profile photo & check admin role
     if (user) {
+      const updates = {};
       if (effectivePhone && (!user.phone || user.phone !== effectivePhone)) {
         const phoneDuplicate = await userRepository.findByPhone(effectivePhone, user.id);
-        if (!phoneDuplicate) {
-          user = await userRepository.updateProfile(user.id, { name: user.name, phone: effectivePhone });
-        }
+        if (!phoneDuplicate) updates.phone = effectivePhone;
       }
+      if (picture && (!user.profile_photo || user.profile_photo !== picture)) {
+        updates.profile_photo = picture;
+      }
+      if (Object.keys(updates).length > 0) {
+        user = await userRepository.updateProfile(user.id, {
+          name: user.name,
+          phone: updates.phone || user.phone || 'Not provided',
+          profile_photo: updates.profile_photo || user.profile_photo,
+        });
+      }
+
+      user = await this.ensureAdminRoleIfNeeded(user);
       const token = this.generateToken(user);
       return { user, token };
     }
 
-    // --- BRAND NEW ACCOUNT PATH ---
-    // If not in register mode (e.g. from sign-in page), do NOT auto-create account!
-    if (!isRegister && !user_id) {
-      throw new UnauthorizedError('No Quick Finder account found with this Google email. Please click CREATE ACCOUNT to register first.');
-    }
-
-    // If in register mode, check if we have required profile details (Roll No / Staff ID and Phone)
-    if (!user_id || !user_id.trim() || !effectivePhone) {
-      return {
-        requirePhone: true,
-        requireRegistration: true,
-        message: 'Student Roll No / Staff ID and Phone number are required to create your account.',
-        email: email || '',
-        name: customName || name || '',
-      };
-    }
+    // --- BRAND NEW / MISSING DB ACCOUNT PATH FOR FIREBASE / GOOGLE ---
+    // Calculate fallback user_id and phone if not explicitly provided
+    let finalUserId = (user_id || (email ? email.split('@')[0] : `user_${uid.substring(0, 8)}`)).trim();
+    let finalPhone = (effectivePhone || 'Not provided').trim();
 
     // Check user_id uniqueness (purge stale if inactive)
-    const existingUserId = await userRepository.findByUserId(user_id);
+    const existingUserId = await userRepository.findByUserId(finalUserId);
     if (existingUserId) {
       if (existingUserId.is_active === 0) {
         await userRepository.delete(existingUserId.id);
+      } else if (!user_id) {
+        // If user_id was auto-generated and collided, make it unique
+        finalUserId = `${finalUserId}_${Math.floor(100 + Math.random() * 900)}`;
       } else {
         throw new ConflictError('This Student Roll No. / Staff ID is already registered to another account.');
       }
     }
 
-    // Check phone uniqueness against existing accounts (purge stale if inactive)
-    const phoneDuplicate = await userRepository.findByPhone(effectivePhone);
-    if (phoneDuplicate) {
-      if (phoneDuplicate.is_active === 0) {
-        await userRepository.delete(phoneDuplicate.id);
-      } else {
-        throw new ConflictError('This phone number is already registered to another account.');
+    // Check phone uniqueness against existing accounts if a real phone number was provided
+    if (finalPhone && finalPhone !== 'Not provided') {
+      const phoneDuplicate = await userRepository.findByPhone(finalPhone);
+      if (phoneDuplicate) {
+        if (phoneDuplicate.is_active === 0) {
+          await userRepository.delete(phoneDuplicate.id);
+        } else if (user_id) {
+          throw new ConflictError('This phone number is already registered to another account.');
+        }
       }
     }
 
-    // Create brand new user account with phone and user_id
+    // Create brand new user account in database
     const displayName = (customName || name || (email ? email.split('@')[0] : 'QuickFinder User')).trim();
     user = await userRepository.createFromFirebase({
       name: displayName,
-      user_id: user_id.trim(),
+      user_id: finalUserId,
       email: email || `${uid}@firebase.user`,
-      phone: effectivePhone,
+      phone: finalPhone,
       profile_photo: picture || null,
       firebase_uid: uid,
       provider,
     });
+
+    user = await this.ensureAdminRoleIfNeeded(user);
 
     // Welcome notification
     await notificationRepository.create({

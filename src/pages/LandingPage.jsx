@@ -44,7 +44,7 @@ export default function LandingPage() {
           {/* Title: QUICK FINDER */}
           <div className="space-y-1 animate-fade-in-up">
             <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black text-psg-navy tracking-tight leading-[1.05] font-['Outfit']">
-              <span className="text-psg-blue">QUICK</span> <span className="text-psg-gold">FINDER</span>
+              <span className="text-psg-blue">QUICK</span> <span className="text-psg-navy">FINDER</span>
             </h1>
             <p className="text-lg sm:text-2xl font-black text-slate-800 tracking-tight font-['Outfit']">
               Campus Lost & Found Management Hub
@@ -61,16 +61,16 @@ export default function LandingPage() {
             {isAuthenticated ? (
               <Link
                 to="/dashboard"
-                className="px-8 py-3.5 rounded-2xl bg-psg-navy hover:bg-slate-900 text-white font-extrabold text-sm sm:text-base shadow-xl shadow-psg-navy/20 flex items-center justify-center gap-2.5 transition-all transform hover:-translate-y-0.5"
+                className="px-8 py-3.5 rounded-2xl bg-psg-navy hover:bg-psg-dark text-white font-extrabold text-sm sm:text-base shadow-xl shadow-psg-navy/20 flex items-center justify-center gap-2.5 transition-all transform hover:-translate-y-0.5"
               >
                 <span>Go to Student Dashboard</span>
-                <ArrowRight className="w-5 h-5 text-psg-gold" />
+                <ArrowRight className="w-5 h-5 text-white" />
               </Link>
             ) : (
               <>
                 <Link
                   to="/login"
-                  className="px-7 py-3 rounded-2xl bg-psg-gold hover:bg-amber-400 text-psg-navy font-black text-sm tracking-wide shadow-lg shadow-psg-gold/25 flex items-center justify-center gap-2 transition-all transform hover:-translate-y-0.5"
+                  className="px-7 py-3 rounded-2xl bg-psg-navy hover:bg-psg-dark text-white font-black text-sm tracking-wide shadow-lg shadow-psg-navy/20 flex items-center justify-center gap-2 transition-all transform hover:-translate-y-0.5"
                 >
                   <span>SIGN IN TO CAMPUS PORTAL</span>
                   <ArrowRight className="w-4 h-4" />
@@ -98,19 +98,19 @@ export default function LandingPage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 p-4 sm:p-5 bg-white rounded-3xl border border-slate-200/90 shadow-lg shadow-psg-navy/5 text-center">
               <div className="space-y-0.5 p-1.5">
                 <span className="block text-2xl sm:text-3xl font-black text-psg-navy font-['Outfit']">95%+</span>
-                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Automated Match Rate</span>
+                <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-500">Recovery Rate</span>
               </div>
               <div className="space-y-0.5 p-1.5 border-l border-slate-100">
-                <span className="block text-2xl sm:text-3xl font-black text-psg-blue font-['Outfit']">Multi-Field</span>
-                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Similarity Matching</span>
+                <span className="block text-2xl sm:text-3xl font-black text-psg-blue font-['Outfit']">GROQ AI</span>
+                <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-500">Smart Matching</span>
               </div>
               <div className="space-y-0.5 p-1.5 border-l border-slate-100">
-                <span className="block text-2xl sm:text-3xl font-black text-psg-gold font-['Outfit']">Secure</span>
-                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Claim Verification</span>
+                <span className="block text-2xl sm:text-3xl font-black text-psg-navy font-['Outfit']">100%</span>
+                <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-500">Campus Verification</span>
               </div>
               <div className="space-y-0.5 p-1.5 border-l border-slate-100">
-                <span className="block text-2xl sm:text-3xl font-black text-emerald-600 font-['Outfit']">Verified</span>
-                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Contact Protection</span>
+                <span className="block text-2xl sm:text-3xl font-black text-psg-blue font-['Outfit']">24/7</span>
+                <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-500">Active Support</span>
               </div>
             </div>
           </div>
@@ -132,7 +132,7 @@ export default function LandingPage() {
           
           {/* Step 1 */}
           <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 space-y-3">
-            <div className="w-12 h-12 rounded-2xl bg-psg-navy text-psg-gold flex items-center justify-center font-black text-xl border-2 border-psg-gold/50 shadow">
+            <div className="w-12 h-12 rounded-2xl bg-psg-navy text-white flex items-center justify-center font-black text-xl border-2 border-slate-300 shadow">
               1
             </div>
             <h3 className="text-lg font-extrabold text-psg-navy font-['Outfit']">1. Report Lost Item</h3>
@@ -154,7 +154,7 @@ export default function LandingPage() {
 
           {/* Step 3 */}
           <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 space-y-3">
-            <div className="w-12 h-12 rounded-2xl bg-psg-gold text-psg-navy flex items-center justify-center font-black text-xl border-2 border-amber-300 shadow">
+            <div className="w-12 h-12 rounded-2xl bg-slate-800 text-white flex items-center justify-center font-black text-xl border-2 border-slate-600 shadow">
               3
             </div>
             <h3 className="text-lg font-extrabold text-psg-navy font-['Outfit']">3. Intelligent Matching</h3>
@@ -182,14 +182,14 @@ export default function LandingPage() {
         <div className="bg-psg-navy rounded-3xl p-8 sm:p-12 text-white shadow-2xl border border-blue-900/60">
           <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
             <div>
-              <span className="text-xs font-extrabold uppercase tracking-widest text-psg-gold">Campus Directory</span>
+              <span className="text-xs font-extrabold uppercase tracking-widest text-slate-300">Campus Directory</span>
               <h2 className="text-2xl sm:text-4xl font-black tracking-tight font-['Outfit'] mt-1">
                 Frequently Lost Belongings
               </h2>
             </div>
             <Link
               to="/find"
-              className="inline-flex items-center gap-2 text-xs sm:text-sm font-extrabold text-psg-gold hover:underline"
+              className="inline-flex items-center gap-2 text-xs sm:text-sm font-extrabold text-white hover:underline"
             >
               <span>Browse Complete Directory →</span>
             </Link>
@@ -202,9 +202,9 @@ export default function LandingPage() {
                 <Link
                   key={idx}
                   to={`/find?category=${cat.name}`}
-                  className="p-4 rounded-2xl bg-white/5 hover:bg-white/15 border border-white/10 hover:border-psg-gold transition-all duration-300 hover:-translate-y-1 text-center group"
+                  className="p-4 rounded-2xl bg-white/5 hover:bg-white/15 border border-white/10 hover:border-white transition-all duration-300 hover:-translate-y-1 text-center group"
                 >
-                  <div className="w-10 h-10 mx-auto rounded-xl bg-psg-blue/60 group-hover:bg-psg-gold text-psg-gold group-hover:text-psg-navy flex items-center justify-center mb-2.5 transition-colors shadow">
+                  <div className="w-10 h-10 mx-auto rounded-xl bg-psg-blue/60 group-hover:bg-white text-white group-hover:text-psg-navy flex items-center justify-center mb-2.5 transition-colors shadow">
                     <Icon className="w-5 h-5" />
                   </div>
                   <h4 className="font-bold text-sm text-white">{cat.name}</h4>

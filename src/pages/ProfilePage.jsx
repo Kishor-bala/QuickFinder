@@ -14,6 +14,9 @@ export default function ProfilePage() {
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileSuccess, setProfileSuccess] = useState('');
   const [profileError, setProfileError] = useState('');
+  const [requireOtp, setRequireOtp] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [otpNotice, setOtpNotice] = useState('');
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -35,17 +38,27 @@ export default function ProfilePage() {
     setProfileLoading(true);
     setProfileSuccess('');
     setProfileError('');
+    setOtpNotice('');
 
     try {
       const formData = new FormData();
       formData.append('name', name);
       formData.append('phone', phone);
+      if (otpCode) formData.append('otpCode', otpCode);
       if (profilePhoto) formData.append('profile_photo', profilePhoto);
 
       const res = await api.put('/auth/profile', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
+      if (res.data?.requireOtp) {
+        setRequireOtp(true);
+        setOtpNotice(res.data.message || `A 6-digit OTP code has been sent to ${user?.email} via SMTP to verify changing your phone number.`);
+        return;
+      }
+
+      setRequireOtp(false);
+      setOtpCode('');
       updateUser(res.data.user);
       setProfileSuccess('Profile updated successfully!');
     } catch (err) {
@@ -106,24 +119,29 @@ export default function ProfilePage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         
         {/* User Badge Card */}
-        <div className="bg-psg-navy rounded-3xl p-6 text-white text-center space-y-4 shadow-xl border border-blue-900/60 h-fit">
-          <div className="relative w-28 h-28 mx-auto rounded-2xl overflow-hidden border-4 border-psg-gold bg-psg-blue text-psg-navy flex items-center justify-center font-black text-3xl shadow-lg">
+        <div className="bg-psg-navy rounded-3xl p-6 text-white text-center space-y-4 shadow-xl border border-white/10 h-fit">
+          <div className="relative w-28 h-28 mx-auto rounded-2xl overflow-hidden border-2 border-white/30 bg-psg-navy text-white flex items-center justify-center font-black text-3xl shadow-lg">
             {previewUrl ? (
-              <img src={previewUrl} alt="Avatar" className="w-full h-full object-cover" />
-            ) : (
-              user?.name?.charAt(0) || 'U'
-            )}
-            <label className="absolute inset-0 bg-psg-navy/60 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
-              <Camera className="w-6 h-6 text-psg-gold" />
+              <img
+                src={previewUrl}
+                alt="Avatar"
+                className="w-full h-full object-cover absolute inset-0"
+                referrerPolicy="no-referrer"
+                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+              />
+            ) : null}
+            <span>{user?.name?.charAt(0) || 'U'}</span>
+            <label className="absolute inset-0 bg-psg-navy/60 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer z-10">
+              <Camera className="w-6 h-6 text-white" />
               <input type="file" accept=".jpg,.jpeg,.png,.webp" onChange={handlePhotoChange} className="hidden" />
             </label>
           </div>
 
           <div className="space-y-1">
             <h3 className="font-extrabold text-lg text-white font-['Outfit']">{user?.name}</h3>
-            <p className="text-xs font-bold text-psg-gold">Roll / ID: @{user?.user_id}</p>
+            <p className="text-xs font-bold text-slate-300">Roll / ID: @{user?.user_id}</p>
             <span className={`inline-block px-3 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${
-              user?.role === 'admin' ? 'bg-psg-gold text-psg-navy' : 'bg-white/10 text-slate-200'
+              user?.role === 'admin' ? 'bg-white text-psg-navy' : 'bg-white/10 text-slate-200'
             }`}>
               {user?.role === 'admin' ? 'Campus Administrator' : 'PSG CAS Student/Staff'}
             </span>
@@ -131,11 +149,11 @@ export default function ProfilePage() {
 
           <div className="pt-3 border-t border-white/10 text-left text-xs space-y-2 text-slate-300 font-medium">
             <div className="flex items-center gap-2 truncate">
-              <Mail className="w-3.5 h-3.5 text-psg-gold flex-shrink-0" />
+              <Mail className="w-3.5 h-3.5 text-white flex-shrink-0" />
               <span className="truncate">{user?.email}</span>
             </div>
             <div className="flex items-center gap-2">
-              <Phone className="w-3.5 h-3.5 text-psg-gold flex-shrink-0" />
+              <Phone className="w-3.5 h-3.5 text-white flex-shrink-0" />
               <span>{user?.phone}</span>
             </div>
           </div>
@@ -147,7 +165,7 @@ export default function ProfilePage() {
           {/* Edit Profile Form */}
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-md space-y-6">
             <div className="flex items-center gap-2">
-              <User className="w-5 h-5 text-psg-blue" />
+              <User className="w-5 h-5 text-psg-navy" />
               <h2 className="text-lg font-black text-psg-navy font-['Outfit']">Edit Personal Details</h2>
             </div>
 
@@ -174,7 +192,7 @@ export default function ProfilePage() {
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs focus:border-psg-blue outline-none font-semibold"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs focus:border-psg-navy outline-none font-semibold"
                 />
               </div>
 
@@ -187,9 +205,31 @@ export default function ProfilePage() {
                   required
                   value={phone}
                   onChange={(e) => setPhone(e.target.value.replace(/[^0-9+]/g, ''))}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs focus:border-psg-blue outline-none font-semibold"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs focus:border-psg-navy outline-none font-semibold"
                 />
               </div>
+
+              {requireOtp && (
+                <div className="p-4 rounded-2xl bg-blue-50 border border-psg-navy/30 space-y-2.5">
+                  <p className="text-xs font-extrabold text-psg-navy leading-relaxed">
+                    {otpNotice || `A 6-digit OTP code was sent to ${user?.email} via SMTP to confirm updating your phone number.`}
+                  </p>
+                  <div>
+                    <label className="block text-[10px] font-extrabold uppercase tracking-wider text-psg-navy mb-1">
+                      Enter 6-Digit Email OTP Code:
+                    </label>
+                    <input
+                      type="text"
+                      maxLength={6}
+                      required
+                      value={otpCode}
+                      onChange={(e) => setOtpCode(e.target.value.replace(/[^0-9]/g, ''))}
+                      placeholder="123456"
+                      className="w-full text-center tracking-[0.3em] text-lg font-black px-4 py-2.5 rounded-xl border border-psg-navy bg-white outline-none"
+                    />
+                  </div>
+                </div>
+              )}
 
               <div>
                 <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">
@@ -219,7 +259,7 @@ export default function ProfilePage() {
                 <button
                   type="submit"
                   disabled={profileLoading}
-                  className="px-6 py-2.5 rounded-xl bg-psg-navy hover:bg-slate-900 text-white text-xs font-extrabold shadow-md border border-psg-gold disabled:opacity-50"
+                  className="px-6 py-2.5 rounded-xl bg-psg-navy hover:bg-psg-royal text-white text-xs font-extrabold shadow-md border border-white/20 disabled:opacity-50"
                 >
                   {profileLoading ? 'Saving...' : 'UPDATE PROFILE'}
                 </button>

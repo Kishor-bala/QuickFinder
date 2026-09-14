@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Shield, Users, Search, Upload, Sparkles, CheckCircle, Clock, Trash2, Ban, Check, RefreshCw, BarChart2, Megaphone, FileText, MapPin, Key, UserX, UserCheck, AlertTriangle } from 'lucide-react';
 import api from '../services/api';
+import { useToast } from '../context/ToastContext';
 
 export default function AdminDashboardPage() {
+  const { toast, confirm } = useToast();
   const [metrics, setMetrics] = useState(null);
   const [users, setUsers] = useState([]);
   const [lostItems, setLostItems] = useState([]);
@@ -45,7 +47,8 @@ export default function AdminDashboardPage() {
       setAnnouncements(annRes.data?.announcements || []);
       setAuditLogs(logRes.data?.logs || []);
     } catch (err) {
-      console.error('Failed to load admin dashboard:', err);
+      console.error('Failed to load admin metrics:', err);
+      toast.error('Failed to load admin metrics');
     } finally {
       setLoading(false);
     }
@@ -58,50 +61,71 @@ export default function AdminDashboardPage() {
   const handleToggleUser = async (userId) => {
     try {
       await api.put(`/admin/users/${userId}/status`);
+      toast.success('User status updated');
       fetchAdminData();
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to toggle user status.');
+      toast.error(err.response?.data?.message || 'Failed to toggle user status.');
     }
   };
 
   const handleDeleteUser = async (userId) => {
-    if (!window.confirm('Are you sure you want to permanently delete this user account?')) return;
+    const isConfirmed = await confirm({
+      title: 'Delete User Account?',
+      message: 'Are you sure you want to permanently delete this user account? All associated records will be removed.',
+      confirmText: 'Delete User',
+      type: 'danger',
+    });
+    if (!isConfirmed) return;
     try {
       await api.delete(`/admin/users/${userId}`);
       fetchAdminData();
-      alert('User deleted successfully.');
+      toast.success('User deleted successfully.');
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to delete user.');
+      toast.error(err.response?.data?.message || 'Failed to delete user.');
     }
   };
 
   const handleSendResetPasswordLink = async (userId) => {
     try {
       const res = await api.post(`/admin/users/${userId}/reset-password`);
-      alert(res.data.message || 'Password reset link sent to user email.');
+      toast.success(res.data.message || 'Password reset link sent to user email.');
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to send password reset link.');
+      toast.error(err.response?.data?.message || 'Failed to send password reset link.');
     }
   };
 
   const handleUpdateRole = async (userId, currentRole) => {
     const newRole = currentRole === 'admin' ? 'student' : 'admin';
-    if (!window.confirm(`Change role of user to ${newRole.toUpperCase()}?`)) return;
+    const isConfirmed = await confirm({
+      title: 'Change User Role?',
+      message: `Are you sure you want to change the role of this user to ${newRole.toUpperCase()}?`,
+      confirmText: 'Update Role',
+      type: 'primary',
+    });
+    if (!isConfirmed) return;
     try {
       await api.put(`/admin/users/${userId}/role`, { role: newRole });
       fetchAdminData();
+      toast.success(`User role updated to ${newRole.toUpperCase()}`);
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to update user role.');
+      toast.error(err.response?.data?.message || 'Failed to update user role.');
     }
   };
 
   const handleDeleteItem = async (type, id) => {
-    if (!window.confirm(`Are you sure you want to delete this ${type} listing?`)) return;
+    const isConfirmed = await confirm({
+      title: `Delete ${type.toUpperCase()} Listing?`,
+      message: `Are you sure you want to delete this ${type} listing? This action cannot be undone.`,
+      confirmText: 'Delete Listing',
+      type: 'danger',
+    });
+    if (!isConfirmed) return;
     try {
       await api.delete(`/admin/items/${type}/${id}`);
       fetchAdminData();
+      toast.success(`${type.toUpperCase()} listing deleted successfully.`);
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to delete listing.');
+      toast.error(err.response?.data?.message || 'Failed to delete listing.');
     }
   };
 
@@ -109,8 +133,9 @@ export default function AdminDashboardPage() {
     try {
       await api.put(`/admin/items/${type}/${id}/resolve`);
       fetchAdminData();
+      toast.success('Item resolved successfully.');
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to resolve item.');
+      toast.error(err.response?.data?.message || 'Failed to resolve item.');
     }
   };
 
@@ -118,9 +143,9 @@ export default function AdminDashboardPage() {
     try {
       await api.post(`/admin/matches/${matchId}/review`, { action });
       fetchAdminData();
-      alert(`Match ${action === 'MATCH_CONFIRMED' ? 'confirmed' : 'dismissed'} successfully.`);
+      toast.success(`Match ${action === 'MATCH_CONFIRMED' ? 'confirmed' : 'dismissed'} successfully.`);
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to review match.');
+      toast.error(err.response?.data?.message || 'Failed to review match.');
     }
   };
 
@@ -132,9 +157,9 @@ export default function AdminDashboardPage() {
       setAnnTitle('');
       setAnnContent('');
       fetchAdminData();
-      alert('Campus announcement published!');
+      toast.success('Campus announcement published!');
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to publish announcement.');
+      toast.error(err.response?.data?.message || 'Failed to publish announcement.');
     }
   };
 
@@ -143,13 +168,13 @@ export default function AdminDashboardPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-2xl bg-psg-navy text-psg-gold flex items-center justify-center shadow-lg border border-psg-gold/40">
+          <div className="w-12 h-12 rounded-2xl bg-psg-navy text-white flex items-center justify-center shadow-lg border border-white/20">
             <Shield className="w-6 h-6" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-extrabold uppercase tracking-widest text-psg-blue">PSG TECH</span>
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-psg-gold text-psg-navy">
+              <span className="text-[10px] font-extrabold uppercase tracking-widest text-psg-navy">PSG TECH</span>
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-psg-navy text-white border border-white/20">
                 Super-Admin Access Active
               </span>
             </div>
@@ -163,7 +188,7 @@ export default function AdminDashboardPage() {
           onClick={fetchAdminData}
           className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-psg-navy text-xs font-bold transition shadow-sm self-start sm:self-auto"
         >
-          <RefreshCw className="w-3.5 h-3.5 text-psg-blue" />
+          <RefreshCw className="w-3.5 h-3.5 text-psg-navy" />
           <span>Refresh Data</span>
         </button>
       </div>
@@ -175,7 +200,7 @@ export default function AdminDashboardPage() {
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`px-4 py-2.5 rounded-xl text-xs font-extrabold tracking-wide uppercase transition whitespace-nowrap ${
-              activeTab === tab ? 'bg-psg-navy text-psg-gold shadow' : 'text-slate-500 hover:text-slate-800'
+              activeTab === tab ? 'bg-psg-navy text-white shadow' : 'text-slate-500 hover:text-slate-800'
             }`}
           >
             {tab === 'matchCenter' ? 'Match Center' : tab}
@@ -450,7 +475,7 @@ export default function AdminDashboardPage() {
                   required
                   className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm outline-none"
                 />
-                <button type="submit" className="px-6 py-2.5 bg-psg-navy text-psg-gold font-bold text-xs rounded-xl shadow hover:bg-slate-900 transition">
+                <button type="submit" className="px-6 py-2.5 bg-psg-navy text-white font-bold text-xs rounded-xl shadow hover:bg-psg-royal transition border border-white/20">
                   PUBLISH ANNOUNCEMENT
                 </button>
               </form>
