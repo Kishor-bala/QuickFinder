@@ -20,23 +20,6 @@ const claimRoutes = require('./routes/claimRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 
-// Ensure upload directories exist safely (Vercel / serverless safe)
-try {
-  const uploadDirs = [
-    config.uploadDir,
-    path.join(config.uploadDir, 'items'),
-    path.join(config.uploadDir, 'profiles'),
-    path.join(config.uploadDir, 'proofs'),
-  ];
-  uploadDirs.forEach((dir) => {
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-  });
-} catch (err) {
-  logger.warn(`⚠️ Could not create upload directory (${err.message}). Safe fallback active.`);
-}
-
 // Helper to unwrap ESM/CJS interop modules in Vercel bundler environment
 const getHandler = (mod) => (mod && typeof mod === 'object' && mod.default ? mod.default : mod);
 
@@ -51,9 +34,6 @@ app.use(cors({
 app.use(getHandler(requestLogger));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-// Static uploads serving
-app.use('/uploads', express.static(config.uploadDir));
 
 // Rate limiting on API routes
 app.use('/api', getHandler(apiRateLimiter));
