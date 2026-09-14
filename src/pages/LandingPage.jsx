@@ -32,12 +32,12 @@ export default function LandingPage() {
             </span>
           </div>
 
-          {/* Official PSG Crest Logo Image */}
-          <div className="animate-fade-in-down animation-delay-100 -mb-1">
+          {/* Official PSG Crest Logo Image (Extra-Large Hero Display) */}
+          <div className="animate-fade-in-down animation-delay-100 py-1">
             <img
               src="/psg-logo.svg"
               alt="PSG College Crest"
-              className="h-12 sm:h-16 w-auto mx-auto drop-shadow-md transition-transform hover:scale-105"
+              className="h-24 sm:h-36 lg:h-40 w-auto mx-auto drop-shadow-xl transition-transform hover:scale-105"
             />
           </div>
 
