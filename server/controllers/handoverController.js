@@ -9,16 +9,21 @@ exports.getLocations = async (req, res, next) => {
   }
 };
 
-exports.recordHandover = async (req, res, next) => {
+exports.createToken = async (req, res, next) => {
   try {
-    const { found_item_id, handover_location, notes } = req.body;
-    const handover = await handoverService.recordHandover({
-      found_item_id,
-      staff_uid: req.user.id,
-      handover_location,
-      notes,
-    });
-    res.status(201).json({ handover });
+    const { claimId } = req.body;
+    const result = await handoverService.createHandoverToken({ claimId, userId: req.user.id });
+    res.status(201).json(result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.verifyToken = async (req, res, next) => {
+  try {
+    const { handoverId, token } = req.body;
+    const result = await handoverService.verifyHandoverToken({ handoverId, token, verifyingUserId: req.user.id });
+    res.status(200).json(result);
   } catch (err) {
     next(err);
   }

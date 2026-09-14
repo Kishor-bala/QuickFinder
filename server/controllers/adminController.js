@@ -29,6 +29,37 @@ exports.setUserStatus = async (req, res, next) => {
   }
 };
 
+exports.updateUserRole = async (req, res, next) => {
+  try {
+    const userId = req.params.id;
+    const { role } = req.body;
+    const result = await adminService.updateUserRole(userId, role, req.user.id);
+    res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.deleteUser = async (req, res, next) => {
+  try {
+    const userId = req.params.id;
+    const result = await adminService.deleteUser(userId, req.user.id);
+    res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.sendPasswordResetLink = async (req, res, next) => {
+  try {
+    const userId = req.params.id;
+    const result = await adminService.sendPasswordResetLink(userId, req.user.id);
+    res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.getLostItems = async (req, res, next) => {
   try {
     const items = await adminService.getLostItems();
@@ -70,6 +101,26 @@ exports.resolveItem = async (req, res, next) => {
   try {
     const { type, id } = req.params;
     const result = await adminService.resolveItem(type, id, req.user.id);
+    res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.getMatchCenter = async (req, res, next) => {
+  try {
+    const matches = await adminService.getMatchCenter();
+    res.status(200).json({ matches });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.reviewMatch = async (req, res, next) => {
+  try {
+    const matchId = req.params.id;
+    const { action } = req.body;
+    const result = await adminService.reviewMatch(matchId, action, req.user.id);
     res.status(200).json(result);
   } catch (err) {
     next(err);

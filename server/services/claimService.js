@@ -3,10 +3,18 @@ const itemRepository = require('../repositories/itemRepository');
 const matchRepository = require('../repositories/matchRepository');
 const notificationRepository = require('../repositories/notificationRepository');
 const userRepository = require('../repositories/userRepository');
+const auditService = require('./auditService');
 const { getFirebaseDb } = require('../config/firebaseAdmin');
+const { SUPER_ADMIN_EMAILS } = require('../shared/constants');
 const { BadRequestError, ForbiddenError, NotFoundError } = require('../utils/errors');
 
 class ClaimService {
+  isSuperAdmin(user) {
+    if (!user) return false;
+    if (user.role === 'admin') return true;
+    return SUPER_ADMIN_EMAILS.includes((user.email || '').toLowerCase().trim());
+  }
+
   async submitClaim({ found_item_id, claimant_id, message, proof_image, match_id = null }) {
     if (!found_item_id || !message) {
       throw new BadRequestError('Found item ID and claim description/proof are required.');
@@ -39,7 +47,18 @@ class ClaimService {
       status: 'pending', // pending, verification_required, under_review, accepted, rejected, completed
     });
 
-    await itemRepository.updateFound(found_item_id, { status: 'Claim Requested' });
+    await itemRepository.updateFound(found_item_id, { status: 'Claim Pending' });
+
+    await auditService.recordEvent({
+      actorId: claimant_id,
+      actorRole: 'STUDENT',
+      action: 'CLAIM_CREATED',
+      targetType: 'CLAIM',
+      targetId: claim.id,
+      itemId: found_item_id,
+      claimId: claim.id,
+      metadata: { message, match_id }
+    });
 
     // Notify finder
     await notificationRepository.create({
@@ -64,7 +83,7 @@ class ClaimService {
     return claim;
   }
 
-  async respondToClaim(claimId, userId, action, payload = {}) {
+  async respondToClaim(claimId, requestingUser, action, payload = {}) {
     const validActions = ['accept', 'reject', 'ask_verification', 'submit_answer', 'confirm_return'];
     if (!action || !validActions.includes(action.toLowerCase())) {
       throw new BadRequestError(`Valid action required (${validActions.join(', ')}).`);
@@ -75,12 +94,16 @@ class ClaimService {
       throw new NotFoundError('Claim request not found.');
     }
 
+    const userId = typeof requestingUser === 'object' ? requestingUser.id : requestingUser;
+    const userObj = typeof requestingUser === 'object' ? requestingUser : await userRepository.findById(userId);
+    const isAdmin = this.isSuperAdmin(userObj);
+
     const act = action.toLowerCase();
     const firebaseDb = getFirebaseDb();
 
     // Action 1: Ask for verification questions
     if (act === 'ask_verification') {
-      if (String(claim.finder_id) !== String(userId)) {
+      if (String(claim.finder_id) !== String(userId) && !isAdmin) {
         throw new ForbiddenError('Only the finder or authorized staff can request verification proof.');
       }
       const questions = payload.questions || 'Please describe any private marks, serial number, or exact contents inside this item.';
@@ -88,6 +111,17 @@ class ClaimService {
         status: 'verification_required',
         verificationQuestions: questions,
         updatedAt: new Date().toISOString(),
+      });
+
+      await auditService.recordEvent({
+        actorId: userId,
+        actorRole: isAdmin ? 'ADMIN' : 'STUDENT',
+        action: 'VERIFICATION_REQUESTED',
+        targetType: 'CLAIM',
+        targetId: claimId,
+        itemId: claim.found_item_id,
+        claimId,
+        metadata: { questions }
       });
 
       await notificationRepository.create({
@@ -104,7 +138,7 @@ class ClaimService {
 
     // Action 2: Submit verification answer
     if (act === 'submit_answer') {
-      if (String(claim.claimant_id) !== String(userId)) {
+      if (String(claim.claimant_id) !== String(userId) && !isAdmin) {
         throw new ForbiddenError('Only the claimant can submit verification answers.');
       }
       if (!payload.answer) {
@@ -114,6 +148,17 @@ class ClaimService {
         status: 'under_review',
         verificationAnswer: payload.answer,
         updatedAt: new Date().toISOString(),
+      });
+
+      await auditService.recordEvent({
+        actorId: userId,
+        actorRole: 'STUDENT',
+        action: 'VERIFICATION_SUBMITTED',
+        targetType: 'CLAIM',
+        targetId: claimId,
+        itemId: claim.found_item_id,
+        claimId,
+        metadata: { answer: payload.answer }
       });
 
       await notificationRepository.create({
@@ -130,19 +175,30 @@ class ClaimService {
 
     // Action 3: Accept Claim
     if (act === 'accept') {
-      if (String(claim.finder_id) !== String(userId)) {
-        throw new ForbiddenError('Only the finder can accept claims.');
+      if (String(claim.finder_id) !== String(userId) && !isAdmin) {
+        throw new ForbiddenError('Only the finder or authorized admin can accept claims.');
       }
       await claimRepository.updateStatus(claim.id, 'accepted');
-      await itemRepository.updateFound(claim.found_item_id, { status: 'handover_pending' });
+      await itemRepository.updateFound(claim.found_item_id, { status: 'Handover Pending' });
 
       if (claim.match_id) {
         const match = await matchRepository.findById(claim.match_id);
         if (match) {
           await matchRepository.dismissMatch(claim.match_id);
-          await itemRepository.updateLost(match.lost_item_id, { status: 'handover_pending' });
+          await itemRepository.updateLost(match.lost_item_id, { status: 'Handover Pending' });
         }
       }
+
+      await auditService.recordEvent({
+        actorId: userId,
+        actorRole: isAdmin ? 'ADMIN' : 'STUDENT',
+        action: 'CLAIM_APPROVED',
+        targetType: 'CLAIM',
+        targetId: claimId,
+        itemId: claim.found_item_id,
+        claimId,
+        metadata: { acceptedBy: userId }
+      });
 
       await notificationRepository.create({
         user_id: claim.claimant_id,
@@ -158,11 +214,22 @@ class ClaimService {
 
     // Action 4: Reject Claim
     if (act === 'reject') {
-      if (String(claim.finder_id) !== String(userId)) {
-        throw new ForbiddenError('Only the finder can reject claims.');
+      if (String(claim.finder_id) !== String(userId) && !isAdmin) {
+        throw new ForbiddenError('Only the finder or authorized admin can reject claims.');
       }
       await claimRepository.updateStatus(claim.id, 'rejected');
       await itemRepository.updateFound(claim.found_item_id, { status: 'Available' });
+
+      await auditService.recordEvent({
+        actorId: userId,
+        actorRole: isAdmin ? 'ADMIN' : 'STUDENT',
+        action: 'CLAIM_REJECTED',
+        targetType: 'CLAIM',
+        targetId: claimId,
+        itemId: claim.found_item_id,
+        claimId,
+        metadata: { rejectedBy: userId, reason: payload.reason || 'Not approved' }
+      });
 
       await notificationRepository.create({
         user_id: claim.claimant_id,
@@ -181,8 +248,8 @@ class ClaimService {
       const isClaimant = String(claim.claimant_id) === String(userId);
       const isFinder = String(claim.finder_id) === String(userId);
 
-      if (!isClaimant && !isFinder) {
-        throw new ForbiddenError('Only participants in this recovery can confirm return.');
+      if (!isClaimant && !isFinder && !isAdmin) {
+        throw new ForbiddenError('Only participants or authorized staff can confirm return.');
       }
 
       const field = isClaimant ? 'claimantConfirmed' : 'finderConfirmed';
@@ -191,7 +258,7 @@ class ClaimService {
       const currentSnap = await firebaseDb.ref(`claims/${claimId}`).once('value');
       const curData = currentSnap.val() || {};
 
-      const bothConfirmed = (isClaimant && curData.finderConfirmed) || (isFinder && curData.claimantConfirmed);
+      const bothConfirmed = isAdmin || (isClaimant && curData.finderConfirmed) || (isFinder && curData.claimantConfirmed);
 
       if (bothConfirmed) {
         updates.status = 'completed';
@@ -203,6 +270,17 @@ class ClaimService {
           if (match) await itemRepository.updateLost(match.lost_item_id, { status: 'Returned' });
         }
 
+        await auditService.recordEvent({
+          actorId: userId,
+          actorRole: isAdmin ? 'ADMIN' : 'STUDENT',
+          action: 'ITEM_RETURNED',
+          targetType: 'ITEM',
+          targetId: claim.found_item_id,
+          itemId: claim.found_item_id,
+          claimId,
+          metadata: { completedBy: userId }
+        });
+
         // Record recovery log
         await firebaseDb.ref(`recoveries/${claimId}`).set({
           id: claimId,
@@ -212,50 +290,12 @@ class ClaimService {
           owner_id: claim.claimant_id,
           completedAt: new Date().toISOString(),
         });
-
-        // Boost reputation scores (+10 for both finder and owner)
-        try {
-          const finderUser = await userRepository.findById(claim.finder_id);
-          const ownerUser = await userRepository.findById(claim.claimant_id);
-          if (finderUser) await userRepository.update(claim.finder_id, { reputationScore: (finderUser.reputationScore || 0) + 10, successfulReturns: (finderUser.successfulReturns || 0) + 1 });
-          if (ownerUser) await userRepository.update(claim.claimant_id, { reputationScore: (ownerUser.reputationScore || 0) + 5 });
-        } catch (e) {
-          console.warn('[Reputation Update Error]:', e.message);
-        }
-
-        await notificationRepository.create({
-          user_id: claim.claimant_id,
-          title: `🎉 Recovery Confirmed: "${claim.item_name}" Returned!`,
-          message: `Item return confirmed! Thank you for using Campus QuickFinder.`,
-          type: 'item_returned',
-          reference_id: claim.id,
-          reference_type: 'recovery',
-        });
-
-        await notificationRepository.create({
-          user_id: claim.finder_id,
-          title: `🎉 Recovery Completed!`,
-          message: `Great job returning "${claim.item_name}"! +10 reputation score awarded.`,
-          type: 'item_returned',
-          reference_id: claim.id,
-          reference_type: 'recovery',
-        });
-      } else {
-        const otherUser = isClaimant ? claim.finder_id : claim.claimant_id;
-        await notificationRepository.create({
-          user_id: otherUser,
-          title: `Return Confirmation Needed`,
-          message: `${isClaimant ? 'Claimant' : 'Finder'} has confirmed item handover. Please confirm return on your claim page to complete recovery.`,
-          type: 'confirm_return_requested',
-          reference_id: claim.id,
-          reference_type: 'claim',
-        });
       }
 
       await firebaseDb.ref(`claims/${claimId}`).update(updates);
 
       return {
-        message: bothConfirmed ? 'Recovery completed and confirmed by both parties! 🎉' : 'Return confirmed on your side. Awaiting other party confirmation.',
+        message: bothConfirmed ? 'Recovery completed and confirmed! 🎉' : 'Return confirmed on your side. Awaiting other party confirmation.',
         claimStatus: bothConfirmed ? 'completed' : claim.status,
       };
     }

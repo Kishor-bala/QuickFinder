@@ -4,6 +4,7 @@ import { Search, Filter, MapPin, Calendar, Tag, ArrowUpDown, PlusCircle, AlertCi
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import PsgLogo from '../components/PsgLogo';
+import { resolveItemImage } from '../utils/imageResolver';
 
 export default function FindPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -265,7 +266,7 @@ export default function FindPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {items.map((item) => {
             const hasPhoto = item.images && item.images.length > 0;
-            const photoUrl = hasPhoto ? item.images[0] : null;
+            const photoUrl = resolveItemImage(hasPhoto ? item.images[0] : null);
 
             return (
               <div
@@ -280,7 +281,7 @@ export default function FindPage() {
                       alt={item.item_name}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
-                  ) : (
+                  ) : ( (
                     <div className="w-full h-full flex flex-col items-center justify-center text-slate-400">
                       <Search className="w-8 h-8 stroke-[1.5]" />
                       <span className="text-xs font-semibold mt-1">Photo Not Available</span>

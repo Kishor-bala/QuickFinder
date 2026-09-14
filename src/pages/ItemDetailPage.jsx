@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { MapPin, Calendar, Clock, Tag, ShieldCheck, CheckCircle2, Sparkles, ArrowLeft, AlertCircle, Phone, Mail, User } from 'lucide-react';
+import { MapPin, Calendar, Clock, Tag, ShieldCheck, CheckCircle2, Sparkles, ArrowLeft, AlertCircle, Phone, Mail, User, History } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import ClaimModal from '../components/ClaimModal';
 import PsgLogo from '../components/PsgLogo';
+import { resolveItemImage } from '../utils/imageResolver';
 
 export default function ItemDetailPage() {
   const { id } = useParams();
@@ -79,7 +80,7 @@ export default function ItemDetailPage() {
           <div className="relative aspect-[4/3] rounded-3xl bg-slate-100 overflow-hidden border border-slate-200 shadow-xl">
             {currentPhoto ? (
               <img
-                src={currentPhoto}
+                src={resolveItemImage(currentPhoto)}
                 alt={item.item_name}
                 className="w-full h-full object-cover"
               />
@@ -126,7 +127,7 @@ export default function ItemDetailPage() {
                       : 'border-slate-200 opacity-70 hover:opacity-100'
                   }`}
                 >
-                  <img src={img} alt="" className="w-full h-full object-cover" />
+                  <img src={resolveItemImage(img)} alt="" className="w-full h-full object-cover" />
                 </button>
               ))}
             </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Users, Search, Upload, Sparkles, CheckCircle, Clock, Trash2, Ban, Check, RefreshCw, BarChart2, Megaphone, FileText, MapPin } from 'lucide-react';
+import { Shield, Users, Search, Upload, Sparkles, CheckCircle, Clock, Trash2, Ban, Check, RefreshCw, BarChart2, Megaphone, FileText, MapPin, Key, UserX, UserCheck, AlertTriangle } from 'lucide-react';
 import api from '../services/api';
 
 export default function AdminDashboardPage() {
@@ -8,6 +8,7 @@ export default function AdminDashboardPage() {
   const [lostItems, setLostItems] = useState([]);
   const [foundItems, setFoundItems] = useState([]);
   const [claims, setClaims] = useState([]);
+  const [matches, setMatches] = useState([]);
   const [analytics, setAnalytics] = useState(null);
   const [announcements, setAnnouncements] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
@@ -22,12 +23,13 @@ export default function AdminDashboardPage() {
   const fetchAdminData = async () => {
     setLoading(true);
     try {
-      const [mRes, uRes, lRes, fRes, cRes, aRes, annRes, logRes] = await Promise.all([
+      const [mRes, uRes, lRes, fRes, cRes, matchRes, aRes, annRes, logRes] = await Promise.all([
         api.get('/admin/metrics'),
         api.get('/admin/users'),
         api.get('/admin/lost-items'),
         api.get('/admin/found-items'),
         api.get('/admin/claims'),
+        api.get('/admin/match-center').catch(() => ({ data: { matches: [] } })),
         api.get('/admin/analytics').catch(() => ({ data: {} })),
         api.get('/admin/announcements').catch(() => ({ data: {} })),
         api.get('/admin/audit-logs').catch(() => ({ data: {} })),
@@ -38,6 +40,7 @@ export default function AdminDashboardPage() {
       setLostItems(lRes.data.items || []);
       setFoundItems(fRes.data.items || []);
       setClaims(cRes.data.claims || []);
+      setMatches(matchRes.data.matches || []);
       setAnalytics(aRes.data?.analytics || null);
       setAnnouncements(annRes.data?.announcements || []);
       setAuditLogs(logRes.data?.logs || []);
@@ -61,6 +64,37 @@ export default function AdminDashboardPage() {
     }
   };
 
+  const handleDeleteUser = async (userId) => {
+    if (!window.confirm('Are you sure you want to permanently delete this user account?')) return;
+    try {
+      await api.delete(`/admin/users/${userId}`);
+      fetchAdminData();
+      alert('User deleted successfully.');
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to delete user.');
+    }
+  };
+
+  const handleSendResetPasswordLink = async (userId) => {
+    try {
+      const res = await api.post(`/admin/users/${userId}/reset-password`);
+      alert(res.data.message || 'Password reset link sent to user email.');
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to send password reset link.');
+    }
+  };
+
+  const handleUpdateRole = async (userId, currentRole) => {
+    const newRole = currentRole === 'admin' ? 'student' : 'admin';
+    if (!window.confirm(`Change role of user to ${newRole.toUpperCase()}?`)) return;
+    try {
+      await api.put(`/admin/users/${userId}/role`, { role: newRole });
+      fetchAdminData();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to update user role.');
+    }
+  };
+
   const handleDeleteItem = async (type, id) => {
     if (!window.confirm(`Are you sure you want to delete this ${type} listing?`)) return;
     try {
@@ -77,6 +111,16 @@ export default function AdminDashboardPage() {
       fetchAdminData();
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to resolve item.');
+    }
+  };
+
+  const handleReviewMatch = async (matchId, action) => {
+    try {
+      await api.post(`/admin/matches/${matchId}/review`, { action });
+      fetchAdminData();
+      alert(`Match ${action === 'MATCH_CONFIRMED' ? 'confirmed' : 'dismissed'} successfully.`);
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to review match.');
     }
   };
 
@@ -106,7 +150,7 @@ export default function AdminDashboardPage() {
             <div className="flex items-center gap-2">
               <span className="text-[10px] font-extrabold uppercase tracking-widest text-psg-blue">PSG TECH</span>
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-psg-gold text-psg-navy">
-                Institutional Admin
+                Super-Admin Access Active
               </span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-black text-psg-navy tracking-tight font-['Outfit']">
@@ -126,15 +170,15 @@ export default function AdminDashboardPage() {
 
       {/* Tabs */}
       <div className="flex items-center gap-2 border-b border-slate-200 overflow-x-auto pb-2">
-        {['overview', 'users', 'lost', 'found', 'claims', 'analytics', 'announcements', 'audit'].map((tab) => (
+        {['overview', 'matchCenter', 'users', 'lost', 'found', 'claims', 'analytics', 'announcements', 'audit'].map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2.5 rounded-xl text-xs font-extrabold tracking-wide uppercase transition ${
+            className={`px-4 py-2.5 rounded-xl text-xs font-extrabold tracking-wide uppercase transition whitespace-nowrap ${
               activeTab === tab ? 'bg-psg-navy text-psg-gold shadow' : 'text-slate-500 hover:text-slate-800'
             }`}
           >
-            {tab}
+            {tab === 'matchCenter' ? 'Match Center' : tab}
           </button>
         ))}
       </div>
@@ -173,6 +217,85 @@ export default function AdminDashboardPage() {
             </div>
           )}
 
+          {/* Tab: Match Center */}
+          {activeTab === 'matchCenter' && (
+            <div className="space-y-4">
+              <div className="flex justify-between items-center bg-brand-50/50 p-4 rounded-2xl border border-brand-100">
+                <div>
+                  <h3 className="font-black text-psg-navy text-sm flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-brand-600" /> AI 8-Factor Candidate Match Center
+                  </h3>
+                  <p className="text-xs text-slate-600">Review AI suggested potential matches between Lost reports and Found listings (Threshold ≥ 70%).</p>
+                </div>
+                <span className="px-3 py-1 bg-brand-600 text-white font-bold text-xs rounded-xl shadow">{matches.length} Candidates</span>
+              </div>
+
+              {matches.length === 0 ? (
+                <div className="bg-white p-8 text-center rounded-3xl border border-slate-200 text-slate-500 font-medium text-xs">
+                  No candidate matches requiring admin review at this time.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {matches.map(m => (
+                    <div key={m.id} className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+                      <div className="flex justify-between items-start">
+                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase ${
+                          m.confidenceLevel === 'VERY_HIGH' ? 'bg-emerald-100 text-emerald-800' :
+                          m.confidenceLevel === 'HIGH' ? 'bg-blue-100 text-blue-800' :
+                          'bg-amber-100 text-amber-800'
+                        }`}>
+                          {m.confidenceLevel || 'CANDIDATE'} MATCH ({m.matchScore ? Math.round(m.matchScore * 100) : 0}%)
+                        </span>
+                        <span className="text-[10px] font-bold text-slate-400">{new Date(m.created_at || Date.now()).toLocaleDateString()}</span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-100 text-xs">
+                        <div>
+                          <span className="text-[10px] font-bold text-rose-600 uppercase block">Lost Item</span>
+                          <span className="font-extrabold text-slate-900 block">{m.lostItemTitle || m.lostItemId}</span>
+                          <span className="text-[10px] text-slate-500">{m.lostCategory}</span>
+                        </div>
+                        <div className="border-l pl-3 border-slate-200">
+                          <span className="text-[10px] font-bold text-emerald-600 uppercase block">Found Listing</span>
+                          <span className="font-extrabold text-slate-900 block">{m.foundItemTitle || m.foundItemId}</span>
+                          <span className="text-[10px] text-slate-500">{m.foundCategory}</span>
+                        </div>
+                      </div>
+
+                      {m.factorBreakdown && (
+                        <div className="text-[10px] space-y-1 bg-slate-50/70 p-2.5 rounded-xl border border-slate-100">
+                          <span className="font-bold text-slate-600 uppercase block">Matched Factors:</span>
+                          <div className="flex flex-wrap gap-1">
+                            {Object.entries(m.factorBreakdown).map(([factor, val]) => val > 0 && (
+                              <span key={factor} className="px-2 py-0.5 bg-white text-slate-700 font-semibold rounded border border-slate-200">
+                                {factor}: {Math.round(val * 100)}%
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex gap-2 pt-1">
+                        <button
+                          onClick={() => handleReviewMatch(m.id, 'MATCH_CONFIRMED')}
+                          className="flex-1 py-2 bg-emerald-600 text-white font-bold text-xs rounded-xl shadow hover:bg-emerald-700 transition flex items-center justify-center gap-1"
+                        >
+                          <Check className="w-3.5 h-3.5" /> Confirm Match
+                        </button>
+                        <button
+                          onClick={() => handleReviewMatch(m.id, 'MATCH_DISMISSED')}
+                          className="py-2 px-4 bg-slate-100 text-slate-700 hover:bg-rose-50 hover:text-rose-700 font-bold text-xs rounded-xl transition flex items-center justify-center gap-1"
+                        >
+                          <Ban className="w-3.5 h-3.5" /> Dismiss
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Tab 2: Users */}
           {activeTab === 'users' && (
             <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
@@ -184,27 +307,53 @@ export default function AdminDashboardPage() {
                     <th className="p-4">Role</th>
                     <th className="p-4">Reputation</th>
                     <th className="p-4">Status</th>
-                    <th className="p-4">Action</th>
+                    <th className="p-4">Super-Admin Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-semibold">
                   {users.map(u => (
                     <tr key={u.id}>
-                      <td className="p-4 font-bold text-slate-900">{u.name} <span className="text-slate-400 block text-[10px]">{u.user_id}</span></td>
+                      <td className="p-4 font-bold text-slate-900">{u.name} <span className="text-slate-400 block text-[10px]">{u.user_id || u.id}</span></td>
                       <td className="p-4">{u.email}<span className="block text-[10px] text-slate-400">{u.phone}</span></td>
-                      <td className="p-4"><span className="px-2 py-0.5 rounded-full bg-brand-50 text-brand-700 font-bold uppercase text-[9px]">{u.role || 'student'}</span></td>
+                      <td className="p-4">
+                        <span className={`px-2 py-0.5 rounded-full font-bold uppercase text-[9px] ${
+                          u.role === 'admin' ? 'bg-amber-100 text-amber-800' : 'bg-brand-50 text-brand-700'
+                        }`}>
+                          {u.role || 'student'}
+                        </span>
+                      </td>
                       <td className="p-4 text-emerald-600 font-bold">+{u.reputationScore || 0} pts</td>
                       <td className="p-4">
                         <span className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase ${u.is_active !== false ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}`}>
                           {u.is_active !== false ? 'Active' : 'Disabled'}
                         </span>
                       </td>
-                      <td className="p-4">
+                      <td className="p-4 space-x-1 whitespace-nowrap">
                         <button
                           onClick={() => handleToggleUser(u.id)}
-                          className="px-3 py-1.5 rounded-lg border border-slate-200 text-[10px] font-bold text-slate-700 hover:bg-slate-100"
+                          className="px-2.5 py-1 rounded-lg border border-slate-200 text-[10px] font-bold text-slate-700 hover:bg-slate-100"
                         >
                           {u.is_active !== false ? 'Disable' : 'Enable'}
+                        </button>
+                        <button
+                          onClick={() => handleSendResetPasswordLink(u.id)}
+                          className="px-2.5 py-1 rounded-lg border border-brand-200 bg-brand-50 text-[10px] font-bold text-brand-700 hover:bg-brand-100"
+                          title="Send Password Reset Email via Firebase Auth"
+                        >
+                          <Key className="w-3 h-3 inline mr-1" /> Reset Pass
+                        </button>
+                        <button
+                          onClick={() => handleUpdateRole(u.id, u.role)}
+                          className="px-2.5 py-1 rounded-lg border border-slate-200 text-[10px] font-bold text-slate-700 hover:bg-slate-100"
+                        >
+                          Role Toggle
+                        </button>
+                        <button
+                          onClick={() => handleDeleteUser(u.id)}
+                          className="px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 text-[10px] font-bold"
+                          title="Delete User Account"
+                        >
+                          <Trash2 className="w-3 h-3 inline" />
                         </button>
                       </td>
                     </tr>
@@ -350,3 +499,4 @@ export default function AdminDashboardPage() {
     </div>
   );
 }
+
